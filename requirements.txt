@@ -1,0 +1,9 @@
+torch
+transformers
+onnx
+onnxruntime-gpu
+py3nvml
+psutil
+pandas
+matplotlib
+seaborn
