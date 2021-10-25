@@ -334,7 +334,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
                           export_params=True,
                           opset_version=13,
                           verbose=False,
-                          do_constant_folding=False,
+                          # do_constant_folding=False,  # when using trt with plugin, uncomment this line
                           input_names=['input'],
                           output_names=['output1'],
                           dynamic_axes={'input': {0: 'batch_size'},
