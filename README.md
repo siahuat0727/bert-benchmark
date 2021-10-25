@@ -1,5 +1,7 @@
 # bert-benchmark
 
+Work in progress 
+
 ## Installation
  
 ```bash
