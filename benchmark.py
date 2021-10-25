@@ -255,7 +255,6 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
         self._export_tensorrt_engine(
             model, input_ids, onnx_model_path, trt_engine_path)
-        self._assert_trt_valid(model, input_ids, trt_engine_path)
         return self._do_prepare_trt_inference_func(trt_engine_path, input_ids)
 
     def _prepare_deepspeed_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
@@ -354,7 +353,13 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
         engine = load_engine(trt_engine_path)
 
-        # context.set_binding_shape(0, input_ids.size())
+        context = engine.create_execution_context()
+        context.set_binding_shape(0, input_ids.size())
+        inputs, outputs, bindings, stream = allocate_buffers(engine, dynamic_batch=True)
+        inputs[0].host[:input_ids.nelement()] = np.asarray(
+                input_ids).ravel()
+
+        [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
 
         def sync_output(outputs):
             # FIXME del 1:
@@ -365,15 +370,8 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
         def encoder_forward():
 
-            context = engine.create_execution_context()
-            inputs, outputs, bindings, stream = allocate_buffers(engine)
-            inputs[0].host[:input_ids.nelement()] = np.asarray(
-                input_ids).ravel()
-
-            [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
-
-            success = context.execute(batch_size=batch_size, bindings=bindings)
-            # success = context.execute_v2(bindings=bindings)
+            # success = context.execute(batch_size=batch_size, bindings=bindings)
+            success = context.execute_v2(bindings=bindings)
             assert success, "Not exec success"
             [cuda.memcpy_dtoh(out.host, out.device) for out in outputs]
             return [
