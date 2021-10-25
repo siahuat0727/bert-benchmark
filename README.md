@@ -13,13 +13,15 @@ $ git clone https://github.com/siahuat0727/bert-benchmark && cd bert-benchmark
 
 # Install requirements
 $ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-python get-pip.py && rm get-pip.py && pip install -r requirements.txt
+python get-pip.py && rm get-pip.py && \
+pip install -r requirements.txt -f https://download.pytorch.org/whl/cu113/torch_stable.html
 
 # OR
 # Install requirements in venv
 $ python3 -m venv env --without-pip && . env/bin/activate && \
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-python get-pip.py && rm get-pip.py && pip install -r requirements.txt
+python get-pip.py && rm get-pip.py && \
+pip install -r requirements.txt -f https://download.pytorch.org/whl/cu113/torch_stable.html
 ```
 
 ## Run benchmark
