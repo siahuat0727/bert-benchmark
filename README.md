@@ -26,9 +26,10 @@ pip install -r requirements.txt -f https://download.pytorch.org/whl/cu113/torch_
 
 ## Run benchmark
 
+Including PyTorch, PyTorch-JIT, ONNXRuntime, TensorRT, DeepSpeed
+
 ```bash
 $ bash run.sh
-$ python plot.py --files speed-*.csv
 ```
 
 ## Plot results
