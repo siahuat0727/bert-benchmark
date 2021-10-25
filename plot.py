@@ -41,8 +41,10 @@ def extract_nvprof_df_from_csv(files):
         df = df.drop(['Name'], axis=1)
 
         total_time = sum(float(v) for v in df['Time'])
-        assert unit in ('ms', 'us')
+        assert unit in ('ms', 'us', 's')
         if unit == 'us':
+            total_time /= 1000
+        elif unit == 's':
             total_time *= 1000
 
         df = df.drop(['Time'], axis=1)
