@@ -56,7 +56,7 @@ def extract_nvprof_df_from_csv(files):
         return df
 
     return pd.concat([
-        extract_nvprof_df_from_csv(f)
+        do_extract_nvprof_df_from_csv(f)
         for f in files
     ])
 
