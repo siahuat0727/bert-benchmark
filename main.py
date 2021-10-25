@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--runtime-method',
                         default='pytorch',
                         choices=['pytorch', 'pytorch-jit',
-                                 'onnxruntime', 'tensorrt'],
+                                 'onnxruntime', 'tensorrt', 'deepspeed'],
                         help="Runtime selected to run inference"
                              "the option 'pytorch-jit' will replace")
     parser.add_argument('--n_layer',

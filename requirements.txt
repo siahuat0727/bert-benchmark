@@ -2,6 +2,7 @@ torch
 transformers
 onnx
 onnxruntime-gpu
+deepspeed
 py3nvml
 psutil
 pandas

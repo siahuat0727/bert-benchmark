@@ -215,6 +215,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
             'pytorch-jit': self._prepare_pytorch_inference_func,
             'onnxruntime': self._prepare_onnx_inference_func,
             'tensorrt': self._prepare_tensorrt_inference_func,
+            'deepspeed': self._prepare_deepspeed_inference_func,
         }[self.runtime_method](model_name, batch_size, sequence_length)
 
     def _prepare_pytorch_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
@@ -257,6 +258,17 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         self._assert_trt_valid(model, input_ids, trt_engine_path)
         return self._do_prepare_trt_inference_func(trt_engine_path, input_ids)
 
+    def _prepare_deepspeed_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
+
+        model, input_ids = self._shared_prepare_inference_preprocessing(
+            model_name, batch_size, sequence_length)
+
+        # TODO DRY
+        # model.cpu()
+        # input_ids = input_ids.cpu()
+
+        return self._do_prepare_deepspeed_inference_func(model, input_ids)
+
     def _shared_prepare_inference_preprocessing(self, model_name: str, batch_size: int, sequence_length: int):
         """Shared preprocessing for _prepare_xxx_inference_func"""
         # reference: super()._prepare_inference_func
@@ -277,7 +289,6 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
                 transformers_module = __import__(
                     "transformers", fromlist=[model_class])
                 model_cls = getattr(transformers_module, model_class)
-                print(model_cls)
                 model = model_cls(config)
             except ImportError:
                 raise ImportError(
@@ -285,7 +296,6 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
                 )
         else:
             model = MODEL_MAPPING[config.__class__](config)
-            print(MODEL_MAPPING[config.__class__])
 
         model = BertModelSub(BertConfig())
         # model = BertModel(BertConfig())
@@ -324,7 +334,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
                           export_params=True,
                           opset_version=13,
                           verbose=False,
-                          # do_constant_folding=False,
+                          do_constant_folding=False,
                           input_names=['input'],
                           output_names=['output1'],
                           # dynamic_axes={'input': {0: 'batch_size'},
@@ -361,7 +371,6 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
                 input_ids).ravel()
 
             [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
-            print('before exec')
 
             success = context.execute(batch_size=batch_size, bindings=bindings)
             # success = context.execute_v2(bindings=bindings)
@@ -386,6 +395,19 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         save_engine(engine, trt_engine_path)
         # FIXME not valid!
         self._assert_trt_valid(model, input_ids, trt_engine_path)
+
+
+    def _do_prepare_deepspeed_inference_func(self, model, input_ids):
+        import deepspeed
+        ds_engine = deepspeed.init_inference(model, mp_size=1, dtype=torch.half, replace_method='auto')
+
+        model = ds_engine.module
+
+        def encoder_forward():
+            return model(input_ids)
+
+        return encoder_forward
+
 
     def _assert_onnx_valid(self, model, input_ids, onnx_model_path):
 
