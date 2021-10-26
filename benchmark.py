@@ -372,7 +372,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
             # success = context.execute(batch_size=batch_size, bindings=bindings)
             success = context.execute_v2(bindings=bindings)
             assert success, "Not exec success"
-            [cuda.memcpy_dtoh(out.host, out.device) for out in outputs]
+            # [cuda.memcpy_dtoh(out.host, out.device) for out in outputs]
             return [
                 out.host.reshape(self.max_batch_size, -1)[:batch_size]
                 for out in outputs

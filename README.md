@@ -1,9 +1,9 @@
 # bert-benchmark
 
-Work in progress 
+Work in progress
 
 ## Installation
- 
+
 ```bash
 # Run TensorRT Release docker
 $ docker run -v $HOME:/mnt --gpus all --rm -ti nvcr.io/nvidia/tensorrt:21.09-py3
@@ -36,7 +36,7 @@ $ bash run.sh
 
 ```bash
 $ python3 plot.py  --files speed*.csv
-Save inference-speed-hugging.png
+Save inference-speed-python.png
 
 $ python3 plot.py  --files nvprof*.csv  --frmt nvprof
 Save inference-speed-nvprof.png

@@ -24,28 +24,43 @@ def get_method_name(f):
 def get_batch_size(f):
     return f.split('.')[0].split('#')[2]
 
+def is_float(s):
+    try:
+        float(s)
+    except Exception as e:
+        return False
+    return True
+
 def extract_nvprof_df_from_csv(files):
     def do_extract_nvprof_df_from_csv(f):
         df = pd.read_csv(f).assign(
                  methods=get_method_name(f),
                  batch_size=get_batch_size(f),
              )
-        df = df.drop(['Time(%)', 'Calls', 'Avg', 'Min', 'Max', 'Type'], axis=1)
+        df = df.drop(['Time(%)', 'Calls', 'Avg', 'Min', 'Max'], axis=1)
 
         unit = df['Time'].iloc[0]
-        print(unit)
+        for i, row in df.iterrows():
+            if str(row['Time']) in ('s, ms, us'):
+                unit = row['Time']
+            if is_float(row['Time']):
+                t = float(row['Time'])
+                if unit == 'us':
+                    t /= 10**6
+                elif unit == 'ms':
+                    t /= 10**3
+                df.at[i, 'Time'] = str(t)
+
         df = df.drop(0)
 
+        df = df.dropna()
+
+        df = df[df['Type'].str.contains('GPU activities')]
         df = df[~df['Name'].str.contains('memcpy')]
         df = df[~df['Name'].str.contains('memset')]
-        df = df.drop(['Name'], axis=1)
 
+        df = df.drop(['Type', 'Name'], axis=1)
         total_time = sum(float(v) for v in df['Time'])
-        assert unit in ('ms', 'us', 's')
-        if unit == 'us':
-            total_time /= 1000
-        elif unit == 's':
-            total_time *= 1000
 
         df = df.drop(['Time'], axis=1)
         df = df.drop_duplicates()
@@ -72,7 +87,7 @@ def extract_hugging_df_from_csv(files):
 def plot(files, infos, frmt=''):
     df = {
         'nvprof': extract_nvprof_df_from_csv,
-        'hugging': extract_hugging_df_from_csv,
+        'python': extract_hugging_df_from_csv,
     }[frmt](files)
 
     # TODO Make sure all the eles in col is the same
@@ -81,6 +96,8 @@ def plot(files, infos, frmt=''):
 
     title = f"Inference {infos['type']} test for {model} with {seq_len} seq. length"
 
+    df = df.sort_values(by='batch_size', key=lambda col: pd.to_numeric(col))
+    df = df.sort_values(by='methods')
     print(df)
 
     plt.figure(figsize=(10, 6))
@@ -99,8 +116,8 @@ def main():
     parser.add_argument('--files', nargs='+', help="Files to be plotted")
     parser.add_argument('--type', default='speed',
                         choices=['speed', 'memory'], help="")
-    parser.add_argument('--frmt', default='hugging',
-                        choices=['hugging', 'nvprof'], help="")
+    parser.add_argument('--frmt', default='python',
+                        choices=['python', 'nvprof'], help="")
     args = parser.parse_args()
     assert args.files, 'Files are needed to be plotted'
     infos = get_infos(args)
