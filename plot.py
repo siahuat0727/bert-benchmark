@@ -97,7 +97,7 @@ def plot(files, infos, frmt=''):
     title = f"Inference {infos['type']} test for {model} with {seq_len} seq. length"
 
     df = df.sort_values(by='batch_size', key=lambda col: pd.to_numeric(col))
-    df = df.sort_values(by='methods')
+    df = df.sort_values(by='methods', kind='stable')
     print(df)
 
     plt.figure(figsize=(10, 6))

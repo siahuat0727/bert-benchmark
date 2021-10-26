@@ -8,7 +8,6 @@ mkdir -p log_files
 for batch in 1 2 4 8 16
 do
 	for runtime in pytorch pytorch-jit onnxruntime tensorrt deepspeed
-	# for runtime in tensorrt
 	do
 		benchmark_settings="--models bert-base-cased --sequence_lengths 512 --batch_sizes $batch --repeat 12 --save_to_csv"
 		rm *.onnx &> /dev/null
