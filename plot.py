@@ -67,7 +67,7 @@ def extract_nvprof_df_from_csv(files):
         df['result'] = total_time
 
         # TODO
-        df['model'] = 'BERT-based-cased'
+        df['model'] = 'bert-based-cased'
         df['sequence_length'] = 512
 
         return df

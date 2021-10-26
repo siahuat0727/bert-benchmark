@@ -1,4 +1,4 @@
-from transformers import BertConfig, BertModel
+from transformers import BertConfig
 import os
 from typing import Callable
 import timeit
@@ -12,6 +12,7 @@ from transformers import PyTorchBenchmark
 from transformers.models.auto.modeling_auto import MODEL_MAPPING
 
 from utils import assert_equality
+from models import BertModel
 
 
 def get_encoder_output(forward):
@@ -158,7 +159,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
         # input_shape is needed for onnx to generate node without op 'Where'
         # 'Where' op is not supported in NNFusion v0.3
-        model = BertModel(BertConfig(), input_ids.size())
+        model = BertModel(BertConfig(), input_shape=input_ids.size())
         model.eval()
         model.to(self.args.device)
         return model, input_ids

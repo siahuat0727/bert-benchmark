@@ -1,3 +1,4 @@
+import torch
 from transformers.models.bert.modeling_bert import BertEmbeddings as _BertEmbeddings
 from transformers.models.bert.modeling_bert import BertModel as _BertModel
 
@@ -65,7 +66,7 @@ class BertModel(_BertModel):
 
         # input_shape is needed for onnx to generate node without op 'Where'
         # 'Where' op is not supported in NNFusion v0.3
-        self.embeddings = BertEmbeddings(config, input_shape)
+        self.embeddings = BertEmbeddings(config, input_shape=input_shape)
         self.init_weights()
 
     def forward(
