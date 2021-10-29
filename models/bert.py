@@ -32,8 +32,8 @@ class BertEmbeddings(_BertEmbeddings):
         # if hasattr(self, "token_type_ids"):
         # buffered_token_type_ids = self.token_type_ids[:, :seq_length]
         buffered_token_type_ids = self.token_type_ids
-        # buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
-        buffered_token_type_ids_expanded = buffered_token_type_ids.expand(*self.input_shape)
+        buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+        # buffered_token_type_ids_expanded = buffered_token_type_ids.expand(*self.input_shape)
         token_type_ids = buffered_token_type_ids_expanded
 
 

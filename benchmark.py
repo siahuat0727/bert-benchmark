@@ -1,6 +1,6 @@
-from transformers import BertConfig
 import os
 from typing import Callable
+from pathlib import Path
 import timeit
 import functools
 from functools import partial
@@ -10,6 +10,7 @@ import torch
 import torch.onnx
 from transformers import PyTorchBenchmark
 from transformers.models.auto.modeling_auto import MODEL_MAPPING
+from transformers import BertConfig
 
 from utils import assert_equality
 from models import BertModel
@@ -22,6 +23,7 @@ def get_encoder_output(forward):
     return wrapper
 
 
+# TODO refactor: split each runtime into individual class
 class MyPyTorchBenchmark(PyTorchBenchmark):
     """
     Gpu inference speed test for pytorch, pytorch-jit, onnx and tensorrt
@@ -31,6 +33,8 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         self.max_batch_size = kwargs.pop('max_batch_size')
         self.runtime_method = kwargs.pop('runtime_method')
         self.check_equal = kwargs.pop('check_equal')
+        self.dynamic_batch = kwargs.pop('dynamic_batch')
+        self.do_constant_folding = kwargs.pop('do_constant_folding')
 
         super().__init__(*args, **kwargs)
 
@@ -44,17 +48,22 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         # if self.args.is_tpu or self.args.torchscript:
         # run additional 10 times to stabilize compilation for tpu and torchscript
         # logger.info("Do inference on TPU or torchscript. Running model 5 times to stabilize compilation")
-        timeit.repeat(
-            func,
-            repeat=1,
-            number=10,
-        )
+        number = 5
 
-        number = 10
+        if self.runtime_method != 'nnfusion':
+            timeit.repeat(
+                func,
+                repeat=1,
+                number=number,
+            )
+
+        repeat = 2 if self.runtime_method == 'nnfusion' else self.args.repeat
+        number = 1 if self.runtime_method == 'nnfusion' else number
+
         # as written in https://docs.python.org/2/library/timeit.html#timeit.Timer.repeat, min should be taken rather than the average
         runtimes = timeit.repeat(
             func,
-            repeat=self.args.repeat,
+            repeat=repeat,
             number=number,
         )
         print(f'{self.runtime_method} {runtimes}')
@@ -64,6 +73,8 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
             self.print_fn(met.metrics_report())
 
+        if self.runtime_method == 'nnfusion':
+            return min(runtimes) / 105  # NNFusion run 105 iterations in each run
         return min(runtimes) / number
         # except RuntimeError as e:
         #     self.print_fn(f"Doesn't fit on GPU. {e}")
@@ -76,6 +87,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
             'onnxruntime': self._prepare_onnx_inference_func,
             'tensorrt': self._prepare_tensorrt_inference_func,
             'deepspeed': self._prepare_deepspeed_inference_func,
+            'nnfusion': self._prepare_nnfusion_inference_func,
         }[self.runtime_method](model_name, batch_size, sequence_length)
 
     def _prepare_pytorch_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
@@ -100,12 +112,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
         # TODO DRY
         model.cpu()
-        # model.forward = get_encoder_output(model.forward)
         input_ids = input_ids.cpu()
-
-        # from net import Net
-        # model = Net()
-        # input_ids = torch.rand((batch_size, sequence_length))
 
         onnx_model_path = f'{model_name}.onnx'
         self._export_onnx_model(model, input_ids, onnx_model_path)
@@ -122,6 +129,24 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
             model_name, batch_size, sequence_length)
 
         return self._do_prepare_deepspeed_inference_func(model, input_ids)
+
+    def _prepare_nnfusion_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
+
+        model, input_ids = self._shared_prepare_inference_preprocessing(
+            model_name, batch_size, sequence_length)
+
+        # TODO DRY
+        model.cpu()
+        input_ids = input_ids.cpu()
+
+        onnx_model_path = f'{model_name}.onnx'
+        self._export_onnx_model(model, input_ids, onnx_model_path)
+
+        nnfusion_path = f'nnfusion_rt/cuda_codegen/main_test'
+
+        self._export_nnfusion_engine(
+            model, input_ids, onnx_model_path, nnfusion_path)
+        return self._do_prepare_nnfusion_inference_func(model, input_ids, nnfusion_path)
 
     def _shared_prepare_inference_preprocessing(self, model_name: str, batch_size: int, sequence_length: int):
         """Shared preprocessing for _prepare_xxx_inference_func"""
@@ -160,6 +185,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         # input_shape is needed for onnx to generate node without op 'Where'
         # 'Where' op is not supported in NNFusion v0.3
         model = BertModel(BertConfig(), input_shape=input_ids.size())
+
         model.eval()
         model.to(self.args.device)
         return model, input_ids
@@ -183,18 +209,23 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         if os.path.exists(onnx_model_path):
             return
 
+        kwargs = {}
+        if self.dynamic_batch:
+            kwargs['dynamic_axes'] = {
+                'input': {0: 'batch_size'},
+                'output1': {0: 'batch_size'},
+            }
+
         torch.onnx.export(model,
                           input_ids,
                           onnx_model_path,
                           export_params=True,
                           opset_version=13,
                           verbose=False,
-                          # do_constant_folding=False,  # when using trt with plugin, uncomment this line
+                          do_constant_folding=self.do_constant_folding,  # when using trt with plugin, uncomment this line
                           input_names=['input'],
                           output_names=['output1'],
-                          # FIXME add dynamic args
-                          dynamic_axes={'input': {0: 'batch_size'},
-                                        'output1': {0: 'batch_size'}},
+                          **kwargs,
                           # output_names=['output1', 'output2'],
                           # dynamic_axes={'input': {0: 'batch_size'},
                           #               'output1': {0: 'batch_size'},
@@ -214,7 +245,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         context = engine.create_execution_context()
         context.set_binding_shape(0, input_ids.size())
         # FIXME add dynamic args
-        inputs, outputs, bindings, stream = allocate_buffers(engine, dynamic_batch=True)
+        inputs, outputs, bindings, stream = allocate_buffers(engine, dynamic_batch=self.dynamic_batch)
         inputs[0].host[:input_ids.nelement()] = np.asarray(
                 input_ids).ravel()
 
@@ -254,6 +285,12 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         # if self.check_equal:
         #     self._assert_trt_valid(model, input_ids, trt_engine_path)
 
+    def _export_nnfusion_engine(self, model, input_ids, onnx_model_path, nnfusion_path):
+        os.system(f'rm -rf nnfusion_rt')
+        os.system(f'LD_LIBRARY_PATH=/usr/local/lib NNFUSION_HOME=/workspace/nnfusion nnfusion {onnx_model_path} -f onnx')
+        os.system(f'cd nnfusion_rt/cuda_codegen && NNFUSION_HOME=/workspace/nnfusion cmake . && NNFUSION_HOME=/workspace/nnfusion make -j')
+        assert os.path.exists(nnfusion_path)
+
 
     def _do_prepare_deepspeed_inference_func(self, model, input_ids):
         # TODO check correctness
@@ -271,6 +308,18 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
         return encoder_forward
 
+    def _do_prepare_nnfusion_inference_func(self, model, input_ids, nnfusion_path):
+
+        if self.check_equal:
+            print('Warning: No implementation of nnfusion correctness check')
+
+        filename = Path(nnfusion_path).name
+        dirname = Path(nnfusion_path).parent
+
+        def encoder_forward():
+            os.system(f'cd {dirname} && ./{filename}')
+
+        return encoder_forward
 
     def _assert_onnx_valid(self, model, input_ids, onnx_model_path):
 
@@ -302,7 +351,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
     def _get_pytorch_output(self, model, input_ids):
         def extract_pytorch_output(tensor):
             # FIXME del
-            return [tensor.numpy()]
+            return [tensor.cpu().numpy()]
             # return tensor[0].numpy(), tensor[1].numpy()
             return [
                 tensor.last_hidden_state.numpy(),
