@@ -17,7 +17,10 @@ python get-pip.py && rm get-pip.py && \
 pip install -r requirements.txt -f https://download.pytorch.org/whl/cu113/torch_stable.html
 
 # 4. Install nnfusion
-$ cd /workspace && git clone https://github.com/microsoft/nnfusion.git /workspace/nnfusion --branch master --single-branch && DEBIAN_FRONTEND="noninteractive" bash /workspace/nnfusion/maint/script/install_dependency.sh && cd /workspace/nnfusion/ && mkdir build && cd build && cmake .. && make -j6 && cd /workspace
+$ cd /workspace && \
+git clone https://github.com/microsoft/nnfusion.git /workspace/nnfusion --branch master --single-branch && \
+DEBIAN_FRONTEND="noninteractive" bash /workspace/nnfusion/maint/script/install_dependency.sh && \
+cd /workspace/nnfusion/ && mkdir build && cd build && cmake .. && make -j6 && cd /workspace
 
 # Optional, use venv
 $ python3 -m venv env --without-pip && . env/bin/activate && \
