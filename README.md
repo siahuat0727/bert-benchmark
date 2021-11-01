@@ -9,16 +9,17 @@ Work in progress
 $ docker run -v $HOME:/mnt --gpus all --rm -ti nvcr.io/nvidia/tensorrt:21.09-py3
 
 # 2. Git clone
-$ git clone https://github.com/siahuat0727/bert-benchmark && cd bert-benchmark
+$ git clone https://github.com/siahuat0727/bert-benchmark && \
+git clone https://github.com/NVIDIA/TensorRT
 
 # 3. Install requirements
-$ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+$ cd bert-benchmark && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 python get-pip.py && rm get-pip.py && \
-pip install -r requirements.txt -f https://download.pytorch.org/whl/cu113/torch_stable.html
+pip install -r requirements.txt -f https://download.pytorch.org/whl/cu113/torch_stable.html && \
+cd ..
 
 # 4. Install nnfusion
-$ cd /workspace && \
-git clone https://github.com/microsoft/nnfusion.git /workspace/nnfusion --branch master --single-branch && \
+$ git clone https://github.com/microsoft/nnfusion.git /workspace/nnfusion --branch master --single-branch && \
 DEBIAN_FRONTEND="noninteractive" bash /workspace/nnfusion/maint/script/install_dependency.sh && \
 cd /workspace/nnfusion/ && mkdir build && cd build && cmake .. && make -j6 && make install && cd /workspace
 
