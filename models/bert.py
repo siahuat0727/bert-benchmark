@@ -5,6 +5,7 @@ from transformers.models.bert.modeling_bert import BertModel as _BertModel
 
 class BertEmbeddings(_BertEmbeddings):
     """Construct the embeddings from word, position and token_type embeddings."""
+
     def __init__(self, *args, input_shape=[2, 512], **kwargs):
         super().__init__(*args, **kwargs)
         self.input_shape = input_shape
@@ -22,7 +23,6 @@ class BertEmbeddings(_BertEmbeddings):
         # if position_ids is None:
         position_ids = self.position_ids
 
-
         # Setting the token_type_ids to the registered buffer in constructor where it is all zeros, which usually occurs
         # when its auto-generated, registered buffer helps users when tracing the model without passing token_type_ids, solves
         # issue #5664
@@ -32,10 +32,10 @@ class BertEmbeddings(_BertEmbeddings):
         # if hasattr(self, "token_type_ids"):
         # buffered_token_type_ids = self.token_type_ids[:, :seq_length]
         buffered_token_type_ids = self.token_type_ids
-        buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+        buffered_token_type_ids_expanded = buffered_token_type_ids.expand(
+            input_shape[0], seq_length)
         # buffered_token_type_ids_expanded = buffered_token_type_ids.expand(*self.input_shape)
         token_type_ids = buffered_token_type_ids_expanded
-
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)

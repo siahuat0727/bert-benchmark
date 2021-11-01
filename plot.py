@@ -21,11 +21,14 @@ def get_infos(args):
 def get_method_name(f):
     return f.split('.')[0].split('#')[1]
 
+
 def get_batch_size(f):
     return f.split('.')[0].split('#')[2]
 
+
 def get_repeat_number(f):
     return f.split('.')[0].split('#')[3]
+
 
 def is_float(s):
     try:
@@ -34,12 +37,13 @@ def is_float(s):
         return False
     return True
 
+
 def extract_nvprof_df_from_csv(files):
     def do_extract_nvprof_df_from_csv(f):
         df = pd.read_csv(f).assign(
-                 methods=get_method_name(f),
-                 batch_size=get_batch_size(f),
-             )
+            methods=get_method_name(f),
+            batch_size=get_batch_size(f),
+        )
 
         df = df.drop(['Time(%)', 'Calls', 'Avg', 'Min', 'Max'], axis=1)
 
@@ -98,6 +102,7 @@ def extract_nvprof_df_from_csv(files):
         do_extract_nvprof_df_from_csv(f)
         for f in files
     ])
+
 
 def extract_hugging_df_from_csv(files):
     return pd.concat([

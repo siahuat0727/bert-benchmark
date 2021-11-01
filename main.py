@@ -7,13 +7,18 @@ from transformers import (
 )
 
 from benchmark_args import BenchmarkArgumentsSubset
-from benchmark import MyPyTorchBenchmark
+from benchmarks import BENCHMARKS
+
+
+def get_benchmark(runtime_method):
+    return BENCHMARKS[runtime_method.split('-')[0]]
 
 
 def bert_infer_speed(pt_benchmark_subargs, runtime_method, max_batch_size, n_layer, check_equal, dynamic_batch, do_constant_folding):
     pt_benchmark_subdict = dataclasses.asdict(pt_benchmark_subargs)
 
-    assert len(pt_benchmark_subargs.batch_sizes) == 1, pt_benchmark_subargs.batch_sizes
+    assert len(
+        pt_benchmark_subargs.batch_sizes) == 1, pt_benchmark_subargs.batch_sizes
     batch_size = pt_benchmark_subargs.batch_sizes[0]
 
     output_csv = f'speed#{runtime_method}#{batch_size}.csv'
@@ -23,18 +28,21 @@ def bert_infer_speed(pt_benchmark_subargs, runtime_method, max_batch_size, n_lay
     pt_benchmark_subdict['env_info_csv_file'] = '/tmp/env.csv'
 
     # args = PyTorchBenchmarkArguments(**pt_benchmark_subdict, memory=False)
-    args = PyTorchBenchmarkArguments(**pt_benchmark_subdict, multi_process=False, memory=False)
+    args = PyTorchBenchmarkArguments(
+        **pt_benchmark_subdict, multi_process=False, memory=False)
 
     config = BertConfig(num_hidden_layers=n_layer)
 
-    benchmark = MyPyTorchBenchmark(args=args,
-                                   configs=[config],
-                                   runtime_method=runtime_method,
-                                   max_batch_size=max_batch_size,
-                                   check_equal=check_equal,
-                                   dynamic_batch=dynamic_batch,
-                                   do_constant_folding=do_constant_folding,
-                                   )
+    benchmark_cls = get_benchmark(runtime_method)
+
+    benchmark = benchmark_cls(args=args,
+                              configs=[config],
+                              runtime_method=runtime_method,
+                              max_batch_size=max_batch_size,
+                              check_equal=check_equal,
+                              dynamic_batch=dynamic_batch,
+                              do_constant_folding=do_constant_folding,
+                              )
     benchmark.run()
 
 

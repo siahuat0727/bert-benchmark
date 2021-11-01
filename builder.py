@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+from helpers.calibrator import BertCalibrator as BertCalibrator
 import argparse
 import ctypes
 import json
@@ -37,7 +38,6 @@ from builder_utils import SQD_W, SQD_B  # SQuAD Output Keys
 # TODO
 sys.path.append('/workspace/TensorRT/demo/BERT')
 sys.path.append('../TensorRT/demo/BERT')
-from helpers.calibrator import BertCalibrator as BertCalibrator
 
 """
 TensorRT Initialization
@@ -126,7 +126,7 @@ def attention_layer_opt(prefix, config, init_dict, network, input_tensor, imask)
         mult_all = network.add_fully_connected(
             input_tensor, 3 * hidden_size, Wall, Ball)
 
-    ## Hugging Face query key value _layer
+    # Hugging Face query key value _layer
     # network.mark_output(mult_all.get_output(0))
 
     if config.use_qat:
@@ -258,7 +258,6 @@ def transformer_layer_opt(prefix, config, init_dict, network, input_tensor, imas
         prefix + "attention_", config, init_dict, network, input_tensor, imask)
     attention_heads = context_transposed.get_output(0)
 
-
     # FC0
     B_aout = init_dict[prefix + B_AOUT]
     if config.use_int8:
@@ -285,7 +284,6 @@ def transformer_layer_opt(prefix, config, init_dict, network, input_tensor, imas
             attention_heads, hidden_size, W_aout, B_aout)
         B_aout = None
 
-
     skiplayer = skipln(prefix + "attention_output_layernorm_", config, init_dict,
                        network, attention_out_fc.get_output(0), input_tensor, B_aout)
     attention_ln = skiplayer.get_output(0)
@@ -293,8 +291,7 @@ def transformer_layer_opt(prefix, config, init_dict, network, input_tensor, imas
         dr_skln1 = init_dict[prefix + 'intermediate_dense_input_amax']
         set_output_range(skiplayer, dr_skln1)
 
-
-    ## BertIntermediate
+    # BertIntermediate
 
     # FC1 + GELU
     B_mid = init_dict[prefix + B_MID]
@@ -346,7 +343,6 @@ def transformer_layer_opt(prefix, config, init_dict, network, input_tensor, imas
             # use gelu10 according to whitepaper http://arxiv.org/abs/2004.09602
             set_output_range(gelu_layer, 10)
     # intermediate_act = mid_dense_out
-
 
     # FC2
     # Dense to hidden size
@@ -552,9 +548,8 @@ def build_engine(batch_sizes, workspace_size, sequence_lengths, config, weights_
         # FIXME DON'T DO THAT
         mask_idx = None
 
-
-
-        bert_out = bert_model(config, weights_dict, network, embeddings, mask_idx)
+        bert_out = bert_model(config, weights_dict,
+                              network, embeddings, mask_idx)
         network.mark_output(bert_out)
         """
         squad_logits = squad_output("cls_", config, weights_dict, network, bert_out)

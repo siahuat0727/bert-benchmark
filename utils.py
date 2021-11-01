@@ -26,7 +26,7 @@ def assert_equality(np_out1, np_out2, atol=1e-05):
         f"{len(np_out2)=}\n"
         f"{[x.size for x in np_out1]=}\n"
         f"{[x.size for x in np_out2]=}\n"
-    )
+        )
     assert all(
         np.allclose(arr1.flatten(), arr2.flatten(), atol=atol)
         for arr1, arr2 in zip(np_out1, np_out2)

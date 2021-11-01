@@ -23,10 +23,9 @@ def get_encoder_output(forward):
     return wrapper
 
 
-# TODO refactor: split each runtime into individual class
-class MyPyTorchBenchmark(PyTorchBenchmark):
+class BaseBenchmark(PyTorchBenchmark):
     """
-    Gpu inference speed test for pytorch, pytorch-jit, onnx and tensorrt
+    Base class of GPU inference speed test for pytorch, pytorch-jit, onnx, tensorrt, deepspeed and nnfusion
     """
 
     def __init__(self, *args, **kwargs):
@@ -43,11 +42,6 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
             self.args.torchscript = True
 
     def _measure_speed(self, func) -> float:
-        # try:
-        # if self.runtime_method != 'pytorch':
-        # if self.args.is_tpu or self.args.torchscript:
-        # run additional 10 times to stabilize compilation for tpu and torchscript
-        # logger.info("Do inference on TPU or torchscript. Running model 5 times to stabilize compilation")
         number = 10
 
         if self.runtime_method != 'nnfusion':
@@ -68,23 +62,18 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         )
         print(f'{self.runtime_method} {runtimes}')
 
-        if self.args.is_tpu and self.args.torch_xla_tpu_print_metrics:
-            import torch_xla.debug.metrics as met
-
-            self.print_fn(met.metrics_report())
-
         if self.runtime_method == 'nnfusion':
             with open('nnfusion_result.txt') as f:
                 nnfusion_result = f.readlines()[-1]
             assert nnfusion_result.startswith('Summary'), nnfusion_result
-            nnfusion_mintime = float(nnfusion_result.split('[')[2].split(',')[0]) / 1000
+            nnfusion_mintime = float(nnfusion_result.split('[')[
+                                     2].split(',')[0]) / 1000
             return nnfusion_mintime
         return min(runtimes) / number
-        # except RuntimeError as e:
-        #     self.print_fn(f"Doesn't fit on GPU. {e}")
-        #     return "N/A"
 
+    # @abstractmethod
     def _prepare_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
+        # pass
         return {
             'pytorch': self._prepare_pytorch_inference_func,
             'pytorch-jit': self._prepare_pytorch_inference_func,
@@ -186,7 +175,6 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         input_ids = torch.randint(
             vocab_size, (batch_size, sequence_length), dtype=torch.long, device=self.args.device)
 
-
         if self.runtime_method == 'nnfusion':
             # input_shape is needed for onnx to generate node without op 'Where'
             # 'Where' op is not supported in NNFusion v0.3
@@ -230,7 +218,8 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
                           export_params=True,
                           opset_version=13,
                           verbose=False,
-                          do_constant_folding=self.do_constant_folding,  # when using trt with plugin, uncomment this line
+                          # when using trt with plugin, uncomment this line
+                          do_constant_folding=self.do_constant_folding,
                           input_names=['input'],
                           output_names=['output1'],
                           **kwargs,
@@ -253,9 +242,10 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         context = engine.create_execution_context()
         context.set_binding_shape(0, input_ids.size())
         # FIXME add dynamic args
-        inputs, outputs, bindings, stream = allocate_buffers(engine, dynamic_batch=self.dynamic_batch)
+        inputs, outputs, bindings, stream = allocate_buffers(
+            engine, dynamic_batch=self.dynamic_batch)
         inputs[0].host[:input_ids.nelement()] = np.asarray(
-                input_ids).ravel()
+            input_ids).ravel()
 
         [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
 
@@ -288,15 +278,16 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
     def _export_nnfusion_engine(self, model, input_ids, onnx_model_path, nnfusion_path):
         os.system(f'rm -rf nnfusion_rt')
-        os.system(f'LD_LIBRARY_PATH=/usr/local/lib NNFUSION_HOME=/workspace/nnfusion nnfusion {onnx_model_path} -f onnx')
+        # TODO when need NNFUSION_HOME
+        os.system(
+            f'LD_LIBRARY_PATH=/usr/local/lib NNFUSION_HOME=/workspace/nnfusion nnfusion {onnx_model_path} -f onnx')
         os.system(f'cd nnfusion_rt/cuda_codegen && NNFUSION_HOME=/workspace/nnfusion cmake . && NNFUSION_HOME=/workspace/nnfusion make -j')
         assert os.path.exists(nnfusion_path)
 
-
     def _do_prepare_deepspeed_inference_func(self, model, input_ids):
-        # TODO check correctness
         import deepspeed
-        ds_engine = deepspeed.init_inference(model, mp_size=1, dtype=torch.half, replace_method='auto')
+        ds_engine = deepspeed.init_inference(
+            model, mp_size=1, dtype=torch.half, replace_method='auto')
         ds_model = ds_engine.module
 
         if self.check_equal:
@@ -318,7 +309,8 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         dirname = Path(nnfusion_path).parent
 
         def encoder_forward():
-            os.system(f'cd {dirname} && ./{filename} > ../../nnfusion_result.txt')
+            os.system(
+                f'cd {dirname} && ./{filename} > ../../nnfusion_result.txt')
 
         return encoder_forward
 

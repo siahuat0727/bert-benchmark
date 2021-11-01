@@ -1,3 +1,4 @@
+import random
 from transformers import BertConfig, BertModel
 import torch
 import onnxruntime
@@ -6,7 +7,6 @@ import numpy as np
 from utils import assert_equality
 
 torch.manual_seed(0)
-import random
 random.seed(0)
 np.random.seed(0)
 
