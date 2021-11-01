@@ -44,13 +44,8 @@ def main():
         out.host
         for out in outputs
     ]
-    for i, output in enumerate(trt_output):
-        print(f'trt {i} {output.shape=} {output.flatten()[:20]=}')
-    for i, output in enumerate(onnx_output):
-        print(f'onnx {i} {output.shape=} {output.flatten()[:20]=}')
     max_diff = assert_equality(onnx_output, trt_output[-1:], atol=1e-1)
     print(max_diff)
-    # print('Good!')
 
 
 main()

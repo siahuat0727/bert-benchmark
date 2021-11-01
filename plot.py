@@ -44,7 +44,15 @@ def extract_nvprof_df_from_csv(files):
         df = df.drop(['Time(%)', 'Calls', 'Avg', 'Min', 'Max'], axis=1)
 
         unit = df['Time'].iloc[0]
+
+        skip = False
         for i, row in df.iterrows():
+            if str(row['Type']) == 'Type':
+                skip = True
+            if skip:
+                df.drop(i, inplace=True)
+                continue
+
             if str(row['Time']) in ('s, ms, us'):
                 unit = row['Time']
             if is_float(row['Time']):

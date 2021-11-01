@@ -259,13 +259,6 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
 
         [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
 
-        def sync_output(outputs):
-            # FIXME del 1:
-            return [
-                out.host.reshape(self.max_batch_size, -1)[:batch_size]
-                for out in outputs
-            ]
-
         def encoder_forward():
 
             # success = context.execute(batch_size=batch_size, bindings=bindings)
@@ -348,8 +341,6 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         trt_forward = self._do_prepare_trt_inference_func(
             trt_engine_path, input_ids)
         trt_output = trt_forward()
-        # sync_output = trt_forward()
-        # trt_output = sync_output()
 
         pytorch_output = self._get_pytorch_output(model, input_ids)
 
