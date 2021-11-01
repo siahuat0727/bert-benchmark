@@ -11,11 +11,13 @@ rm *.onnx *.engine &> /dev/null
 rm -rf $test_dir &> /dev/null
 mkdir $test_dir
 
-echo Start tesing...\n
+echo
+echo Start tesing...
+echo
 
 for batch in 1
 do
-	for runtime in deepspeed tensorrt onnxruntime nnfusion pytorch pytorch-jit
+	for runtime in deepspeed deepspeed-fp16 onnxruntime nnfusion pytorch pytorch-jit tensorrt tensorrt-plugin tensorrt-plugin-fp16
 	do
 		benchmark_settings="--models bert-base-cased --sequence_lengths 512 --batch_sizes $batch --repeat 2 --save_to_csv --check_equal"
 		log_file="${test_dir}/${runtime}.log"

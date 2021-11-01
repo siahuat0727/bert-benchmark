@@ -12,11 +12,10 @@ mkdir $log_dir
 
 for batch in 1 2 4 8 16
 do
-	for runtime in pytorch pytorch-jit onnxruntime tensorrt deepspeed nnfusion
+	for runtime in deepspeed deepspeed-fp16 onnxruntime nnfusion pytorch pytorch-jit tensorrt tensorrt-plugin tensorrt-plugin-fp16
 	do
 		benchmark_settings="--models bert-base-cased --sequence_lengths 512 --batch_sizes $batch --repeat $repeat --save_to_csv"
 		log_file="${log_dir}/${runtime}_${batch}.log"
-
 
 		rm *.onnx *.engine &> /dev/null
 		# TODO fix bug: when using nvprof, if it need to build engine then there will no csv output for python benchmark
@@ -24,7 +23,9 @@ do
 			python main.py $benchmark_settings --runtime-method $runtime  --repeat 1 &> /dev/null
 		fi
 
-		echo \n\nRun $runtime with $batch batch, save log at $log_file
+		echo
+		echo Run $runtime with $batch batch, save log at $log_file
+
 		nvprof $nvprof_args python main.py $benchmark_settings --runtime-method $runtime &> $log_file
 		tail $log_file
 

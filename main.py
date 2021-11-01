@@ -17,8 +17,9 @@ def get_benchmark(runtime_method):
 def bert_infer_speed(pt_benchmark_subargs, runtime_method, max_batch_size, n_layer, check_equal, dynamic_batch, do_constant_folding):
     pt_benchmark_subdict = dataclasses.asdict(pt_benchmark_subargs)
 
-    assert len(
-        pt_benchmark_subargs.batch_sizes) == 1, pt_benchmark_subargs.batch_sizes
+    assert len(pt_benchmark_subargs.batch_sizes) == 1, (
+        pt_benchmark_subargs.batch_sizes
+    )
     batch_size = pt_benchmark_subargs.batch_sizes[0]
 
     output_csv = f'speed#{runtime_method}#{batch_size}.csv'
@@ -50,8 +51,15 @@ def main():
     parser = HfArgumentParser(BenchmarkArgumentsSubset)
     parser.add_argument('--runtime-method',
                         default='pytorch',
-                        choices=['pytorch', 'pytorch-jit',
-                                 'onnxruntime', 'tensorrt', 'deepspeed', 'nnfusion'],
+                        choices=['pytorch',
+                                 'pytorch-jit',
+                                 'onnxruntime',
+                                 'tensorrt',
+                                 'tensorrt-plugin',
+                                 'tensorrt-plugin-fp16',
+                                 'deepspeed',
+                                 'deepspeed-fp16',
+                                 'nnfusion'],
                         help="Runtime selected to run inference"
                              "the option 'pytorch-jit' will replace")
     parser.add_argument('--n_layer',
@@ -74,9 +82,13 @@ def main():
 
     pt_benchmark_subargs, args = parser.parse_args_into_dataclasses()
 
-    if args.runtime_method == 'tensorrt':
-        args.dynamic_batch = True
-        args.do_constant_folding = True
+    if args.runtime_method.startswith('tensorrt'):
+        if 'plugin' in args.runtime_method:
+            args.do_constant_folding = False
+            args.dynamic_batch = False
+        else:
+            args.do_constant_folding = True
+            args.dynamic_batch = True
 
     assert all(
         batch_size <= args.max_batch_size

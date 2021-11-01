@@ -1,6 +1,5 @@
 import os
 from typing import Callable
-from pathlib import Path
 import timeit
 import functools
 from functools import partial
@@ -37,22 +36,14 @@ class BaseBenchmark(PyTorchBenchmark):
 
         super().__init__(*args, **kwargs)
 
-        if self.runtime_method == 'pytorch-jit':
-            assert hasattr(self.args, 'torchscript')
-            self.args.torchscript = True
+    def do_measure_speed(self, func, repeat, number, is_warmup=True):
 
-    def _measure_speed(self, func) -> float:
-        number = 10
-
-        if self.runtime_method != 'nnfusion':
+        if is_warmup:
             timeit.repeat(
                 func,
                 repeat=1,
                 number=number,
             )
-
-        repeat = 1 if self.runtime_method == 'nnfusion' else self.args.repeat
-        number = 1 if self.runtime_method == 'nnfusion' else number
 
         # as written in https://docs.python.org/2/library/timeit.html#timeit.Timer.repeat, min should be taken rather than the average
         runtimes = timeit.repeat(
@@ -62,84 +53,11 @@ class BaseBenchmark(PyTorchBenchmark):
         )
         print(f'{self.runtime_method} {runtimes}')
 
-        if self.runtime_method == 'nnfusion':
-            with open('nnfusion_result.txt') as f:
-                nnfusion_result = f.readlines()[-1]
-            assert nnfusion_result.startswith('Summary'), nnfusion_result
-            nnfusion_mintime = float(nnfusion_result.split('[')[
-                                     2].split(',')[0]) / 1000
-            return nnfusion_mintime
         return min(runtimes) / number
 
-    # @abstractmethod
-    def _prepare_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
-        # pass
-        return {
-            'pytorch': self._prepare_pytorch_inference_func,
-            'pytorch-jit': self._prepare_pytorch_inference_func,
-            'onnxruntime': self._prepare_onnx_inference_func,
-            'tensorrt': self._prepare_tensorrt_inference_func,
-            'deepspeed': self._prepare_deepspeed_inference_func,
-            'nnfusion': self._prepare_nnfusion_inference_func,
-        }[self.runtime_method](model_name, batch_size, sequence_length)
-
-    def _prepare_pytorch_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
-        return super()._prepare_inference_func(model_name, batch_size, sequence_length)
-
-    def _prepare_onnx_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
-
-        model, input_ids = self._shared_prepare_inference_preprocessing(
-            model_name, batch_size, sequence_length)
-        model.cpu()
-        input_ids = input_ids.cpu()
-
-        onnx_model_path = f'{model_name}.onnx'
-        self._export_onnx_model(model, input_ids, onnx_model_path)
-
-        return self._do_prepare_onnx_inference_func(onnx_model_path, input_ids)
-
-    def _prepare_tensorrt_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
-
-        model, input_ids = self._shared_prepare_inference_preprocessing(
-            model_name, batch_size, sequence_length)
-
-        # TODO DRY
-        model.cpu()
-        input_ids = input_ids.cpu()
-
-        onnx_model_path = f'{model_name}.onnx'
-        self._export_onnx_model(model, input_ids, onnx_model_path)
-
-        trt_engine_path = f'{model_name}.engine'
-
-        self._export_tensorrt_engine(
-            model, input_ids, onnx_model_path, trt_engine_path)
-        return self._do_prepare_trt_inference_func(trt_engine_path, input_ids)
-
-    def _prepare_deepspeed_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
-
-        model, input_ids = self._shared_prepare_inference_preprocessing(
-            model_name, batch_size, sequence_length)
-
-        return self._do_prepare_deepspeed_inference_func(model, input_ids)
-
-    def _prepare_nnfusion_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
-
-        model, input_ids = self._shared_prepare_inference_preprocessing(
-            model_name, batch_size, sequence_length)
-
-        # TODO DRY
-        model.cpu()
-        input_ids = input_ids.cpu()
-
-        onnx_model_path = f'{model_name}.onnx'
-        self._export_onnx_model(model, input_ids, onnx_model_path)
-
-        nnfusion_path = f'nnfusion_rt/cuda_codegen/main_test'
-
-        self._export_nnfusion_engine(
-            model, input_ids, onnx_model_path, nnfusion_path)
-        return self._do_prepare_nnfusion_inference_func(model, input_ids, nnfusion_path)
+    # TODO not start with _, since some runtime (nnfusion) may override it
+    def _measure_speed(self, func) -> float:
+        return self.do_measure_speed(func, self.args.repeat, 10)
 
     def _shared_prepare_inference_preprocessing(self, model_name: str, batch_size: int, sequence_length: int):
         """Shared preprocessing for _prepare_xxx_inference_func"""
@@ -186,21 +104,6 @@ class BaseBenchmark(PyTorchBenchmark):
         model.to(self.args.device)
         return model, input_ids
 
-    def _do_prepare_onnx_inference_func(self, onnx_model_path, input_ids):
-
-        import onnxruntime
-        ort_session = onnxruntime.InferenceSession(onnx_model_path)
-
-        def to_numpy(tensor):
-            return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
-
-        input_ids = {ort_session.get_inputs()[0].name: to_numpy(input_ids)}
-
-        def encoder_forward():
-            return ort_session.run(None, input_ids)
-
-        return encoder_forward
-
     def _export_onnx_model(self, model, input_ids, onnx_model_path):
         if os.path.exists(onnx_model_path):
             return
@@ -231,86 +134,18 @@ class BaseBenchmark(PyTorchBenchmark):
         if self.check_equal:
             self._assert_onnx_valid(model, input_ids, onnx_model_path)
 
-    def _do_prepare_trt_inference_func(self, trt_engine_path, input_ids):
-        from trt_utils import load_engine, allocate_buffers
-        import pycuda.driver as cuda
+    def _do_prepare_onnx_inference_func(self, onnx_model_path, input_ids):
 
-        batch_size = input_ids.size(0)
+        import onnxruntime
+        ort_session = onnxruntime.InferenceSession(onnx_model_path)
 
-        engine = load_engine(trt_engine_path)
+        def to_numpy(tensor):
+            return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
-        context = engine.create_execution_context()
-        context.set_binding_shape(0, input_ids.size())
-        # FIXME add dynamic args
-        inputs, outputs, bindings, stream = allocate_buffers(
-            engine, dynamic_batch=self.dynamic_batch)
-        inputs[0].host[:input_ids.nelement()] = np.asarray(
-            input_ids).ravel()
-
-        [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
+        input_ids = {ort_session.get_inputs()[0].name: to_numpy(input_ids)}
 
         def encoder_forward():
-
-            # success = context.execute(batch_size=batch_size, bindings=bindings)
-            success = context.execute_v2(bindings=bindings)
-            assert success, "Not exec success"
-            # [cuda.memcpy_dtoh(out.host, out.device) for out in outputs]
-            return [
-                out.host.reshape(self.max_batch_size, -1)[:batch_size]
-                for out in outputs
-            ]
-
-        return encoder_forward
-
-    def _export_tensorrt_engine(self, model, input_ids, onnx_model_path, trt_engine_path):
-        if os.path.exists(trt_engine_path):
-            return
-
-        from trt_utils import build_engine, save_engine
-        engine = build_engine(onnx_model_path,
-                              input_ids.size()[1:],
-                              self.max_batch_size)
-
-        save_engine(engine, trt_engine_path)
-        # FIXME not valid!
-        # if self.check_equal:
-        #     self._assert_trt_valid(model, input_ids, trt_engine_path)
-
-    def _export_nnfusion_engine(self, model, input_ids, onnx_model_path, nnfusion_path):
-        os.system(f'rm -rf nnfusion_rt')
-        # TODO when need NNFUSION_HOME
-        os.system(
-            f'LD_LIBRARY_PATH=/usr/local/lib NNFUSION_HOME=/workspace/nnfusion nnfusion {onnx_model_path} -f onnx')
-        os.system(f'cd nnfusion_rt/cuda_codegen && NNFUSION_HOME=/workspace/nnfusion cmake . && NNFUSION_HOME=/workspace/nnfusion make -j')
-        assert os.path.exists(nnfusion_path)
-
-    def _do_prepare_deepspeed_inference_func(self, model, input_ids):
-        import deepspeed
-        ds_engine = deepspeed.init_inference(
-            model, mp_size=1, dtype=torch.half, replace_method='auto')
-        ds_model = ds_engine.module
-
-        if self.check_equal:
-            pytorch_output = self._get_pytorch_output(model, input_ids)
-            ds_output = self._get_pytorch_output(ds_model, input_ids)
-            print(assert_equality(pytorch_output, ds_output))
-
-        def encoder_forward():
-            return ds_model(input_ids)
-
-        return encoder_forward
-
-    def _do_prepare_nnfusion_inference_func(self, model, input_ids, nnfusion_path):
-
-        if self.check_equal:
-            print('Warning: No implementation of nnfusion correctness check')
-
-        filename = Path(nnfusion_path).name
-        dirname = Path(nnfusion_path).parent
-
-        def encoder_forward():
-            os.system(
-                f'cd {dirname} && ./{filename} > ../../nnfusion_result.txt')
+            return ort_session.run(None, input_ids)
 
         return encoder_forward
 
@@ -327,17 +162,6 @@ class BaseBenchmark(PyTorchBenchmark):
 
         print(assert_equality(pytorch_output, onnx_output))
         print(f'ONNX {onnx_model_path} is valid!')
-
-    def _assert_trt_valid(self, model, input_ids, trt_engine_path):
-
-        trt_forward = self._do_prepare_trt_inference_func(
-            trt_engine_path, input_ids)
-        trt_output = trt_forward()
-
-        pytorch_output = self._get_pytorch_output(model, input_ids)
-
-        print(assert_equality(pytorch_output, trt_output))
-        print(f'TensorRT {trt_engine_path} is valid!')
 
     def _get_pytorch_output(self, model, input_ids):
         def extract_pytorch_output(tensor):

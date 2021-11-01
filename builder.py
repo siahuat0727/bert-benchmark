@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-from helpers.calibrator import BertCalibrator as BertCalibrator
 import argparse
 import ctypes
 import json
@@ -37,7 +36,7 @@ from builder_utils import SQD_W, SQD_B  # SQuAD Output Keys
 
 # TODO
 sys.path.append('/workspace/TensorRT/demo/BERT')
-sys.path.append('../TensorRT/demo/BERT')
+from helpers.calibrator import BertCalibrator as BertCalibrator
 
 """
 TensorRT Initialization
