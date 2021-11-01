@@ -19,7 +19,7 @@ do
 
 		rm *.onnx *.engine &> /dev/null
 		# TODO fix bug: when using nvprof, if it need to build engine then there will no csv output for python benchmark
-		if [[ "$runtime" == "tensorrt" ]]; then
+		if [[ "$runtime" == tensorrt* ]]; then
 			python main.py $benchmark_settings --runtime-method $runtime  --repeat 1 &> /dev/null
 		fi
 
