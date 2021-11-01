@@ -62,8 +62,6 @@ def allocate_buffers(engine, dynamic_batch=False):
     stream = cuda.Stream()
     for binding in engine:
         slice_ = slice(1, None) if dynamic_batch else slice(None)
-        print('good')
-        print(engine.get_binding_shape(binding)[slice_], engine.max_batch_size)
         size = trt.volume(engine.get_binding_shape(
             binding)[slice_]) * engine.max_batch_size
         dtype = trt.nptype(engine.get_binding_dtype(binding))

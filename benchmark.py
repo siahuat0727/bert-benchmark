@@ -48,7 +48,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         # if self.args.is_tpu or self.args.torchscript:
         # run additional 10 times to stabilize compilation for tpu and torchscript
         # logger.info("Do inference on TPU or torchscript. Running model 5 times to stabilize compilation")
-        number = 5
+        number = 10
 
         if self.runtime_method != 'nnfusion':
             timeit.repeat(
@@ -57,7 +57,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
                 number=number,
             )
 
-        repeat = 2 if self.runtime_method == 'nnfusion' else self.args.repeat
+        repeat = 1 if self.runtime_method == 'nnfusion' else self.args.repeat
         number = 1 if self.runtime_method == 'nnfusion' else number
 
         # as written in https://docs.python.org/2/library/timeit.html#timeit.Timer.repeat, min should be taken rather than the average
@@ -74,7 +74,11 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
             self.print_fn(met.metrics_report())
 
         if self.runtime_method == 'nnfusion':
-            return min(runtimes) / 105  # NNFusion run 105 iterations in each run
+            with open('nnfusion_result.txt') as f:
+                nnfusion_result = f.readlines()[-1]
+            assert nnfusion_result.startswith('Summary'), nnfusion_result
+            nnfusion_mintime = float(nnfusion_result.split('[')[2].split(',')[0]) / 1000
+            return nnfusion_mintime
         return min(runtimes) / number
         # except RuntimeError as e:
         #     self.print_fn(f"Doesn't fit on GPU. {e}")
@@ -182,9 +186,13 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         input_ids = torch.randint(
             vocab_size, (batch_size, sequence_length), dtype=torch.long, device=self.args.device)
 
-        # input_shape is needed for onnx to generate node without op 'Where'
-        # 'Where' op is not supported in NNFusion v0.3
-        model = BertModel(BertConfig(), input_shape=input_ids.size())
+
+        if self.runtime_method == 'nnfusion':
+            # input_shape is needed for onnx to generate node without op 'Where'
+            # 'Where' op is not supported in NNFusion v0.3
+            model = BertModel(BertConfig(), input_shape=input_ids.size())
+        else:
+            model = BertModel(BertConfig())
 
         model.eval()
         model.to(self.args.device)
@@ -317,7 +325,7 @@ class MyPyTorchBenchmark(PyTorchBenchmark):
         dirname = Path(nnfusion_path).parent
 
         def encoder_forward():
-            os.system(f'cd {dirname} && ./{filename}')
+            os.system(f'cd {dirname} && ./{filename} > ../../nnfusion_result.txt')
 
         return encoder_forward
 

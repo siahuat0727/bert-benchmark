@@ -17,12 +17,15 @@ def get_infos(args):
     }
 
 
+# TODO no need split
 def get_method_name(f):
     return f.split('.')[0].split('#')[1]
 
-
 def get_batch_size(f):
     return f.split('.')[0].split('#')[2]
+
+def get_repeat_number(f):
+    return f.split('.')[0].split('#')[3]
 
 def is_float(s):
     try:
@@ -37,6 +40,7 @@ def extract_nvprof_df_from_csv(files):
                  methods=get_method_name(f),
                  batch_size=get_batch_size(f),
              )
+
         df = df.drop(['Time(%)', 'Calls', 'Avg', 'Min', 'Max'], axis=1)
 
         unit = df['Time'].iloc[0]
@@ -53,6 +57,7 @@ def extract_nvprof_df_from_csv(files):
 
         df = df.drop(0)
 
+        # TODO no need this?
         df = df.dropna()
 
         df = df[df['Type'].str.contains('GPU activities')]
@@ -60,6 +65,15 @@ def extract_nvprof_df_from_csv(files):
         df = df[~df['Name'].str.contains('memset')]
 
         df = df.drop(['Type', 'Name'], axis=1)
+
+        repeat_time = int(get_repeat_number(f))
+        number = 10  # TODO no magic number
+
+        total_iteration = repeat_time * number
+        if get_method_name(f) == 'nnfusion':
+            total_iteration = 105
+
+        df['Time'] = df['Time'].astype(float).div(total_iteration)
         total_time = sum(float(v) for v in df['Time'])
 
         df = df.drop(['Time'], axis=1)

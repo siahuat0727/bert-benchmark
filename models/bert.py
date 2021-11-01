@@ -61,12 +61,15 @@ class BertModel(_BertModel):
     input to the forward pass.
     """
 
-    def __init__(self, config, add_pooling_layer=True, input_shape=[2, 512]):
+    def __init__(self, config, add_pooling_layer=True, input_shape=None):
         super().__init__(config, add_pooling_layer)
 
         # input_shape is needed for onnx to generate node without op 'Where'
         # 'Where' op is not supported in NNFusion v0.3
-        self.embeddings = BertEmbeddings(config, input_shape=input_shape)
+        if input_shape is None:
+            self.embeddings = _BertEmbeddings(config)
+        else:
+            self.embeddings = BertEmbeddings(config, input_shape=input_shape)
         self.init_weights()
 
     def forward(

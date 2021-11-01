@@ -25,12 +25,12 @@ cd /workspace/nnfusion/ && mkdir build && cd build && cmake .. && make -j6 && ma
 # Optional, use venv
 $ python3 -m venv env --without-pip && . env/bin/activate && \
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-python get-pip.py && rm get-pip.py 
+python get-pip.py && rm get-pip.py
 ```
 
 ## Run benchmark
 
-Including PyTorch, PyTorch-JIT, ONNXRuntime, TensorRT, DeepSpeed
+Including PyTorch, PyTorch-JIT, ONNXRuntime, TensorRT, DeepSpeed, NNFusion
 
 ```bash
 $ bash run.sh

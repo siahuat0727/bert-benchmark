@@ -68,6 +68,7 @@ def main():
 
     if args.runtime_method == 'tensorrt':
         args.dynamic_batch = True
+        args.do_constant_folding = True
 
     assert all(
         batch_size <= args.max_batch_size
