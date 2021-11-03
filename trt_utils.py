@@ -34,7 +34,9 @@ def build_engine(onnx_file_path, input_shape, max_batch_size):
             assert parsing_succeed, 'Failed to parse the ONNX model'
 
         profile = builder.create_optimization_profile()
-        profile.set_shape('input', (1,) + input_shape, (max_batch_size,) +
+        profile.set_shape('input1', (1,) + input_shape, (max_batch_size,) +
+                          input_shape, (max_batch_size,) + input_shape)
+        profile.set_shape('input2', (1,) + input_shape, (max_batch_size,) +
                           input_shape, (max_batch_size,) + input_shape)
         config.add_optimization_profile(profile)
 
@@ -77,8 +79,10 @@ def allocate_buffers(engine, dynamic_batch=False):
 
         # Append to the appropriate list.
         if engine.binding_is_input(binding):
+            # print('allocate input', engine.get_binding_shape(binding)[slice_])
             inputs.append(HostDeviceMem(host_mem, device_mem))
         else:
+            # print('allocate output', engine.get_binding_shape(binding)[slice_])
             outputs.append(HostDeviceMem(host_mem, device_mem))
     return inputs, outputs, bindings, stream
 

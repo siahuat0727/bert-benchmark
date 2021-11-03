@@ -2,6 +2,7 @@ import os
 from typing import Callable
 
 import numpy as np
+import torch
 
 from .base_benchmark import BaseBenchmark
 from utils import assert_equality
@@ -41,11 +42,19 @@ class TensorRTBenchmark(BaseBenchmark):
         engine = load_engine(trt_engine_path)
 
         context = engine.create_execution_context()
-        context.set_binding_shape(0, input_ids.size())
+
+        context.set_binding_shape(0, (512,))
+        context.set_binding_shape(1, (512,))
+        context.set_binding_shape(2, (2,))
+        context.set_binding_shape(3, (512,))
         inputs, outputs, bindings, stream = allocate_buffers(
             engine, dynamic_batch=self.dynamic_batch)
         inputs[0].host[:input_ids.nelement()] = np.asarray(
             input_ids).ravel()
+        # inputs[1].host[:input_ids.nelement()] = np.asarray(
+        #     torch.ones_like(input_ids)).ravel()
+        inputs[2].host[:input_ids.nelement()] = np.asarray(
+            torch.ones_like(input_ids)).ravel()
 
         if self.use_plugin:
             import ctypes
@@ -81,7 +90,8 @@ class TensorRTBenchmark(BaseBenchmark):
         if self.use_plugin:
             # TODO no magic number
             cmd = (
-                f'python builder.py -x {onnx_model_path}'
+                # f'python builder.py -x {onnx_model_path}'
+                f'python builder_varseqlen.py -x {onnx_model_path}'
                 f' -o {trt_engine_path}'
                 f' -b {batch_size} -s 512 -c config/'
             )

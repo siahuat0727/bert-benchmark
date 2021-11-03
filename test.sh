@@ -7,7 +7,7 @@ run () {
 	python3 main.py $1 --runtime-method $2 &> $3
 }
 
-rm *.onnx *.engine &> /dev/null
+# rm *.onnx *.engine &> /dev/null
 rm -rf $test_dir &> /dev/null
 mkdir $test_dir
 
@@ -17,7 +17,8 @@ echo
 
 for batch in 1
 do
-	for runtime in deepspeed deepspeed-fp16 onnxruntime nnfusion pytorch pytorch-jit tensorrt tensorrt-plugin tensorrt-plugin-fp16
+	# for runtime in deepspeed deepspeed-fp16 onnxruntime nnfusion pytorch pytorch-jit tensorrt tensorrt-plugin tensorrt-plugin-fp16
+	for runtime in tensorrt-plugin
 	do
 		benchmark_settings="--models bert-base-cased --sequence_lengths 512 --batch_sizes $batch --repeat 2 --save_to_csv --check_equal"
 		log_file="${test_dir}/${runtime}.log"

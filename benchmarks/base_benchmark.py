@@ -98,7 +98,7 @@ class BaseBenchmark(PyTorchBenchmark):
             # 'Where' op is not supported in NNFusion v0.3
             model = BertModel(BertConfig(), input_shape=input_ids.size())
         else:
-            model = BertModel(BertConfig())
+            model = BertModel(BertConfig(num_hidden_layers=1))
 
         model.eval()
         model.to(self.args.device)
@@ -108,28 +108,36 @@ class BaseBenchmark(PyTorchBenchmark):
         if os.path.exists(onnx_model_path):
             return
 
+        attention_mask = torch.ones_like(input_ids)
+        # token_ids = torch.zeros_like(input_ids).long()
+
+        inputs = (input_ids, attention_mask)
+        # inputs = (input_ids, attention_mask, token_ids)
+
+        n_input = 2
+        n_output = 1
+
+        input_names = [f'input{i+1}' for i in range(n_input)]
+        output_names = [f'output{i+1}' for i in range(n_output)]
+
+
         kwargs = {}
         if self.dynamic_batch:
             kwargs['dynamic_axes'] = {
-                'input': {0: 'batch_size'},
-                'output1': {0: 'batch_size'},
+                k: {0: 'batch_size'}
+                for k in input_names + output_names
             }
 
         torch.onnx.export(model,
-                          input_ids,
+                          inputs,
                           onnx_model_path,
                           export_params=True,
                           opset_version=13,
                           verbose=False,
-                          # when using trt with plugin, uncomment this line
                           do_constant_folding=self.do_constant_folding,
-                          input_names=['input'],
-                          output_names=['output1'],
+                          input_names=input_names,
+                          output_names=output_names,
                           **kwargs,
-                          # output_names=['output1', 'output2'],
-                          # dynamic_axes={'input': {0: 'batch_size'},
-                          #               'output1': {0: 'batch_size'},
-                          #               'output2': {0: 'batch_size'}},
                           )
         if self.check_equal:
             self._assert_onnx_valid(model, input_ids, onnx_model_path)
@@ -142,10 +150,15 @@ class BaseBenchmark(PyTorchBenchmark):
         def to_numpy(tensor):
             return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
-        input_ids = {ort_session.get_inputs()[0].name: to_numpy(input_ids)}
+        # input_ids2 = {ort_session.get_inputs()[0].name: to_numpy(torch.ones_like(input_ids))}
+        ort_input = {
+                ort_session.get_inputs()[0].name: to_numpy(input_ids),
+                ort_session.get_inputs()[1].name: to_numpy(torch.ones_like(input_ids)),
+                # ort_session.get_inputs()[2].name: to_numpy(torch.zeros_like(input_ids).long()),
+        }
 
         def encoder_forward():
-            return ort_session.run(None, input_ids)
+            return ort_session.run(None, ort_input)
 
         return encoder_forward
 

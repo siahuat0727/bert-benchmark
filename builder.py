@@ -167,7 +167,7 @@ def attention_layer_opt(prefix, config, init_dict, network, input_tensor, imask)
         print(imask)
         # import sys
         # sys.exit(1)
-        # qkv_in.append(imask)
+        qkv_in.append(imask)
     qkv2ctx = network.add_plugin_v2(qkv_in, qkv2ctx_plug)
 
     if config.use_qat:
@@ -543,9 +543,10 @@ def build_engine(batch_sizes, workspace_size, sequence_lengths, config, weights_
         embeddings = emb_layer.get_output(0)
 
         mask_idx = emb_layer.get_output(1)
+        print(mask_idx)
 
         # FIXME DON'T DO THAT
-        mask_idx = None
+        # mask_idx = None
 
         bert_out = bert_model(config, weights_dict,
                               network, embeddings, mask_idx)
