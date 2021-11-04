@@ -17,3 +17,6 @@ class ONNXRuntimeBenchmark(BaseBenchmark):
         self._export_onnx_model(model, input_ids, onnx_model_path)
 
         return self._do_prepare_onnx_inference_func(onnx_model_path, input_ids)
+
+    def extract_output(self, output):
+        return output

@@ -142,17 +142,53 @@ def plot(files, infos, frmt=''):
     plt.savefig(img_path)
 
 
+def plot_error(files):
+    def get_runtime_and_value(f):
+        runtime = f.split('_')[-1].split('.')[0]
+        with open(f) as f:
+            max_abs_err = float(f.readline().strip())
+        return {
+            'runtime': runtime,
+            'max_abs_error': max_abs_err,
+        }
+    data = list(
+        get_runtime_and_value(f)
+        for f in files
+    )
+    print(data)
+    df = pd.DataFrame.from_records(data)
+    print(df)
+    df = df.sort_values(by='runtime', kind='stable')
+    df = df.dropna()
+    print(df)
+
+    ax = sns.barplot(x='runtime', y='max_abs_error', hue='runtime', data=df)
+    ax.set_title('Max absolute error of each runtime')
+    ax.set_yscale("log")
+
+    plt.xticks(rotation=-15)
+    # ax.set_ylabel(infos['ylabel'])
+    ax.set_xlabel('runtimes')
+
+    img_path = f"inference-max-abs-error.png"
+    print(f'Save {img_path}')
+    plt.savefig(img_path)
+
+
 def main():
     parser = ArgumentParser()
     parser.add_argument('--files', nargs='+', help="Files to be plotted")
     parser.add_argument('--type', default='speed',
-                        choices=['speed', 'memory'], help="")
+                        choices=['speed', 'memory', 'error'], help="")
     parser.add_argument('--frmt', default='python',
                         choices=['python', 'nvprof'], help="")
     args = parser.parse_args()
     assert args.files, 'Files are needed to be plotted'
     infos = get_infos(args)
-    plot(args.files, infos, args.frmt)
+    if args.type == 'error':
+        plot_error(args.files)
+    else:
+        plot(args.files, infos, args.frmt)
 
 
 main()

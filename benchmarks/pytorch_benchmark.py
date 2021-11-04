@@ -35,6 +35,7 @@ class PyTorchBenchmark(BaseBenchmark):
                 outputs = inference_model(input_ids)
             return outputs
 
-        _forward = encoder_forward
-        return _forward
-        # return super()._prepare_inference_func(model_name, batch_size, sequence_length)
+        return encoder_forward
+
+    def extract_output(self, output):
+        return [output.cpu().numpy()]

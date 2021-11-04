@@ -8,6 +8,7 @@ run () {
 }
 
 rm *.onnx *.engine &> /dev/null
+rm max_abs_error_*.txt &> /dev/null
 rm -rf $test_dir &> /dev/null
 mkdir $test_dir
 

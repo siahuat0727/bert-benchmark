@@ -9,11 +9,6 @@ from utils import assert_equality
 
 class TensorRTBenchmark(BaseBenchmark):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fp16 = 'fp16' in self.runtime_method.split('-')
-        self.use_plugin = 'plugin' in self.runtime_method.split('-')
-
     def _prepare_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
         model, input_ids = self._shared_prepare_inference_preprocessing(
             model_name, batch_size, sequence_length)
@@ -54,7 +49,8 @@ class TensorRTBenchmark(BaseBenchmark):
 
         def encoder_forward():
 
-            [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
+            if self.check_equal:
+                [cuda.memcpy_htod(inp.device, inp.host) for inp in inputs]
 
             # success = context.execute(batch_size=batch_size, bindings=bindings)
             success = context.execute_v2(bindings=bindings)
@@ -98,22 +94,5 @@ class TensorRTBenchmark(BaseBenchmark):
 
             save_engine(engine, trt_engine_path)
 
-        if self.check_equal:
-            self._assert_trt_valid(input_ids, trt_engine_path)
-
-    def _assert_trt_valid(self, input_ids, trt_engine_path):
-
-        trt_forward = self._do_prepare_trt_inference_func(
-            trt_engine_path, input_ids)
-        trt_output = trt_forward()
-
-        pytorch_output = self.pytorch_output
-
-        atol = 1e-5
-        if self.use_plugin:
-            atol = 5e-3
-        if self.fp16:
-            atol = 5e-2
-
-        print(assert_equality(pytorch_output, trt_output, atol=atol))
-        print(f'TensorRT {trt_engine_path} is valid!')
+    def extract_output(self, output):
+        return output

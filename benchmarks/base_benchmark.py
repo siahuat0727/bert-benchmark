@@ -33,10 +33,12 @@ class BaseBenchmark(PyTorchBenchmark):
         self.check_equal = kwargs.pop('check_equal')
         self.dynamic_batch = kwargs.pop('dynamic_batch')
         self.do_constant_folding = kwargs.pop('do_constant_folding')
+        super().__init__(*args, **kwargs)
+
+        self.fp16 = 'fp16' in self.runtime_method.split('-')
+        self.use_plugin = 'plugin' in self.runtime_method.split('-')
         self.sequence_length = None
         self.pytorch_output = None
-
-        super().__init__(*args, **kwargs)
 
     def do_measure_speed(self, func, repeat, number, is_warmup=True):
 
@@ -57,10 +59,44 @@ class BaseBenchmark(PyTorchBenchmark):
 
         return min(runtimes) / number
 
+    def extract_output(self, output):
+        """Override this function to extract output of each runtime"""
+        pass
+
+    def _assert_result_allclose(self, func):
+        def write(txt):
+            path = f'max_abs_error_{self.runtime_method}.txt'
+            with open(path, 'w') as f:
+                print(txt,  file=f)
+            print(f'Save max abs error at {path}')
+
+        def get_appropriate_atol():
+            atol = 1e-5
+            if self.use_plugin:
+                atol = 5e-3
+            if self.fp16:
+                atol = 5e-2
+            return atol
+
+        output = self.extract_output(func())
+        if output is None:
+            print('No implementation to verify correctness')
+            write('N/A')
+            return
+
+        atol = get_appropriate_atol()
+        max_abs_errs = assert_equality(self.pytorch_output, output, atol)
+
+        write(max(max_abs_errs))
+        print(f'{self.runtime_method} allclose with {max_abs_errs=}')
+
     # TODO not start with _, since some runtime (nnfusion) may override it
     def _measure_speed(self, func) -> float:
+        if self.check_equal:
+            self._assert_result_allclose(func)
         return self.do_measure_speed(func, self.args.repeat, 10)
 
+    # TODO not start with _
     def _shared_prepare_inference_preprocessing(self, model_name: str, batch_size: int, sequence_length: int):
         """Shared preprocessing for _prepare_xxx_inference_func"""
         # reference: super()._prepare_inference_func
@@ -120,8 +156,10 @@ class BaseBenchmark(PyTorchBenchmark):
                           #               'output1': {0: 'batch_size'},
                           #               'output2': {0: 'batch_size'}},
                           )
-        if self.check_equal:
-            self._assert_onnx_valid(model, input_ids, onnx_model_path)
+        import onnx
+        onnx_model = onnx.load(onnx_model_path)
+        ok = onnx.checker.check_model(onnx_model)  # TODO What happend if fail?
+        print(f'onnx {ok=}')
 
     def _do_prepare_onnx_inference_func(self, onnx_model_path, input_ids):
 
@@ -138,22 +176,6 @@ class BaseBenchmark(PyTorchBenchmark):
 
         return encoder_forward
 
-    def _assert_onnx_valid(self, model, input_ids, onnx_model_path):
-        assert self.check_equal
-
-        import onnx
-        onnx_model = onnx.load(onnx_model_path)
-        onnx.checker.check_model(onnx_model)  # TODO What happend if fail?
-        onnx_forward = self._do_prepare_onnx_inference_func(
-            onnx_model_path, input_ids)
-        onnx_output = onnx_forward()
-
-        pytorch_output = self.pytorch_output
-
-        print(assert_equality(pytorch_output, onnx_output))
-        print(f'ONNX {onnx_model_path} is valid!')
-
-    # TODO may call by deepspeed, don't start with _
     def _get_pytorch_output(self, model, input_ids):
         def extract_pytorch_output(tensor):
             # FIXME del

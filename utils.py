@@ -27,12 +27,15 @@ def assert_equality(np_out1, np_out2, atol=1e-05):
         f"{[x.size for x in np_out1]=}\n"
         f"{[x.size for x in np_out2]=}\n"
         )
+
+    res = max_abs_diff(np_out1, np_out2)
     assert all(
         np.allclose(arr1.flatten(), arr2.flatten(), atol=atol)
         for arr1, arr2 in zip(np_out1, np_out2)
     ), ("Output of np_out1 and np_out2 doesn't match.\n"
         f"Correct rate: {correct_rate(np_out1, np_out2)}\n"
         f"{np_out1=}\n"
-        f"{np_out2=}\n")
-
-    return f"Max abs diff: {max_abs_diff(np_out1, np_out2)}"
+        f"{np_out2=}\n"
+        f"Max abs diff: {res}"
+    )
+    return res
