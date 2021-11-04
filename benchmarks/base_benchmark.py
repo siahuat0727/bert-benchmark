@@ -34,6 +34,7 @@ class BaseBenchmark(PyTorchBenchmark):
         self.dynamic_batch = kwargs.pop('dynamic_batch')
         self.do_constant_folding = kwargs.pop('do_constant_folding')
         self.sequence_length = None
+        self.pytorch_output = None
 
         super().__init__(*args, **kwargs)
 
@@ -86,6 +87,10 @@ class BaseBenchmark(PyTorchBenchmark):
 
         model.eval()
         model.to(self.args.device)
+
+        if self.check_equal:
+            self.pytorch_output = self._get_pytorch_output(model, input_ids)
+
         return model, input_ids
 
     def _export_onnx_model(self, model, input_ids, onnx_model_path):
@@ -134,6 +139,7 @@ class BaseBenchmark(PyTorchBenchmark):
         return encoder_forward
 
     def _assert_onnx_valid(self, model, input_ids, onnx_model_path):
+        assert self.check_equal
 
         import onnx
         onnx_model = onnx.load(onnx_model_path)
@@ -142,11 +148,12 @@ class BaseBenchmark(PyTorchBenchmark):
             onnx_model_path, input_ids)
         onnx_output = onnx_forward()
 
-        pytorch_output = self._get_pytorch_output(model, input_ids)
+        pytorch_output = self.pytorch_output
 
         print(assert_equality(pytorch_output, onnx_output))
         print(f'ONNX {onnx_model_path} is valid!')
 
+    # TODO may call by deepspeed, don't start with _
     def _get_pytorch_output(self, model, input_ids):
         def extract_pytorch_output(tensor):
             # FIXME del

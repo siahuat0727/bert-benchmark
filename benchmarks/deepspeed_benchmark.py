@@ -16,23 +16,24 @@ class DeepSpeedBenchmark(BaseBenchmark):
         model, input_ids = self._shared_prepare_inference_preprocessing(
             model_name, batch_size, sequence_length)
 
-        return self._do_prepare_deepspeed_inference_func(model, input_ids)
-
-    def _do_prepare_deepspeed_inference_func(self, model, input_ids):
-        import deepspeed
-
         dtype = torch.half if self.fp16 else torch.float
+
+        import deepspeed
         ds_engine = deepspeed.init_inference(
             model, mp_size=1, dtype=dtype, replace_method='auto')
         ds_model = ds_engine.module
 
+        return self._do_prepare_deepspeed_inference_func(ds_model, input_ids)
+
+    def _do_prepare_deepspeed_inference_func(self, model, input_ids):
+
         if self.check_equal:
-            pytorch_output = self._get_pytorch_output(model, input_ids)
-            ds_output = self._get_pytorch_output(ds_model, input_ids)
+            pytorch_output = self.pytorch_output
+            ds_output = self._get_pytorch_output(model, input_ids)
             atol = 1e-3 if self.fp16 else 1e-5
             print(assert_equality(pytorch_output, ds_output, atol=atol))
 
         def encoder_forward():
-            return ds_model(input_ids)
+            return model(input_ids)
 
         return encoder_forward

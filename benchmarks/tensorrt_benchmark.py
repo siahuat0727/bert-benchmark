@@ -99,15 +99,15 @@ class TensorRTBenchmark(BaseBenchmark):
             save_engine(engine, trt_engine_path)
 
         if self.check_equal:
-            self._assert_trt_valid(model, input_ids, trt_engine_path)
+            self._assert_trt_valid(input_ids, trt_engine_path)
 
-    def _assert_trt_valid(self, model, input_ids, trt_engine_path):
+    def _assert_trt_valid(self, input_ids, trt_engine_path):
 
         trt_forward = self._do_prepare_trt_inference_func(
             trt_engine_path, input_ids)
         trt_output = trt_forward()
 
-        pytorch_output = self._get_pytorch_output(model, input_ids)
+        pytorch_output = self.pytorch_output
 
         atol = 1e-5
         if self.use_plugin:
