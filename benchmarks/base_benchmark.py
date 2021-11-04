@@ -33,6 +33,7 @@ class BaseBenchmark(PyTorchBenchmark):
         self.check_equal = kwargs.pop('check_equal')
         self.dynamic_batch = kwargs.pop('dynamic_batch')
         self.do_constant_folding = kwargs.pop('do_constant_folding')
+        self.sequence_length = None
 
         super().__init__(*args, **kwargs)
 
@@ -62,30 +63,12 @@ class BaseBenchmark(PyTorchBenchmark):
     def _shared_prepare_inference_preprocessing(self, model_name: str, batch_size: int, sequence_length: int):
         """Shared preprocessing for _prepare_xxx_inference_func"""
         # reference: super()._prepare_inference_func
+        self.sequence_length = sequence_length
 
         config = self.config_dict[model_name]
 
         if self.args.torchscript:
             config.torchscript = True
-
-        has_model_class_in_config = (
-            hasattr(config, "architectures")
-            and isinstance(config.architectures, list)
-            and len(config.architectures) > 0
-        )
-        if not self.args.only_pretrain_model and has_model_class_in_config:
-            try:
-                model_class = config.architectures[0]
-                transformers_module = __import__(
-                    "transformers", fromlist=[model_class])
-                model_cls = getattr(transformers_module, model_class)
-                model = model_cls(config)
-            except ImportError:
-                raise ImportError(
-                    f"{model_class} does not exist. If you just want to test the pretrained model, you might want to set `--only_pretrain_model` or `args.only_pretrain_model=True`."
-                )
-        else:
-            model = MODEL_MAPPING[config.__class__](config)
 
         # encoder-decoder has vocab size saved differently
         vocab_size = config.vocab_size if hasattr(
@@ -93,12 +76,13 @@ class BaseBenchmark(PyTorchBenchmark):
         input_ids = torch.randint(
             vocab_size, (batch_size, sequence_length), dtype=torch.long, device=self.args.device)
 
+        config.max_position_embeddings = max(config.max_position_embeddings, sequence_length)
         if self.runtime_method == 'nnfusion':
             # input_shape is needed for onnx to generate node without op 'Where'
             # 'Where' op is not supported in NNFusion v0.3
-            model = BertModel(BertConfig(), input_shape=input_ids.size())
+            model = BertModel(config, input_shape=input_ids.size())
         else:
-            model = BertModel(BertConfig())
+            model = BertModel(config)
 
         model.eval()
         model.to(self.args.device)

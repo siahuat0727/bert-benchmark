@@ -60,6 +60,11 @@ skln_plg_creator = plg_registry.get_plugin_creator(
 fc_plg_creator = plg_registry.get_plugin_creator(
     "CustomFCPluginDynamic", "1", "")
 
+assert not any(
+    plg is None
+    for plg in [emln_plg_creator, qkv2_plg_creator, skln_plg_creator, fc_plg_creator]
+), ', '.join([emln_plg_creator, qkv2_plg_creator, skln_plg_creator, fc_plg_creator])
+
 
 class BertConfig:
     def __init__(self, bert_config_path, use_fp16, use_int8, use_strict, use_fc2_gemm, use_int8_skipln, use_int8_multihead, use_qat, use_sparsity, timing_cache):

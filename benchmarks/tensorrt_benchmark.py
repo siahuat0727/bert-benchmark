@@ -77,13 +77,14 @@ class TensorRTBenchmark(BaseBenchmark):
             return
 
         batch_size = input_ids.size(0)
+        assert self.sequence_length is not None
 
         if self.use_plugin:
             # TODO no magic number
             cmd = (
                 f'python builder.py -x {onnx_model_path}'
                 f' -o {trt_engine_path}'
-                f' -b {batch_size} -s 512 -c config/'
+                f' -b {batch_size} -s {self.sequence_length} -c config/'
             )
             if self.fp16:
                 cmd += ' --fp16'

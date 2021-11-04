@@ -6,9 +6,12 @@ from transformers.models.bert.modeling_bert import BertModel as _BertModel
 class BertEmbeddings(_BertEmbeddings):
     """Construct the embeddings from word, position and token_type embeddings."""
 
-    def __init__(self, *args, input_shape=[2, 512], **kwargs):
+    def __init__(self, *args, **kwargs):
+        print('use custom embedding')
+        self.input_shape = kwargs.pop('input_shape')
+
         super().__init__(*args, **kwargs)
-        self.input_shape = input_shape
+
 
     def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
@@ -67,6 +70,7 @@ class BertModel(_BertModel):
         # input_shape is needed for onnx to generate node without op 'Where'
         # 'Where' op is not supported in NNFusion v0.3
         if input_shape is None:
+            # TODO no need override, it is the same
             self.embeddings = _BertEmbeddings(config)
         else:
             self.embeddings = BertEmbeddings(config, input_shape=input_shape)

@@ -19,7 +19,7 @@ for batch in 1
 do
 	for runtime in deepspeed deepspeed-fp16 onnxruntime nnfusion pytorch pytorch-jit tensorrt tensorrt-plugin tensorrt-plugin-fp16
 	do
-		benchmark_settings="--models bert-base-cased --sequence_lengths 512 --batch_sizes $batch --repeat 2 --save_to_csv --check_equal"
+		benchmark_settings="--models bert-base-cased --sequence_lengths 576 --batch_sizes $batch --repeat 2 --save_to_csv --check_equal"
 		log_file="${test_dir}/${runtime}.log"
 
 		rm *.onnx *.engine &> /dev/null

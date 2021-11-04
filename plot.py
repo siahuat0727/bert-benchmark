@@ -94,7 +94,7 @@ def extract_nvprof_df_from_csv(files):
 
         # TODO
         df['model'] = 'bert-based-cased'
-        df['sequence_length'] = 512
+        df['sequence_length'] = 576
 
         return df
 
