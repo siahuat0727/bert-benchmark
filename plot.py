@@ -29,6 +29,11 @@ def get_batch_size(f):
 def get_repeat_number(f):
     return f.split('.')[0].split('#')[3]
 
+def get_model_name(f):
+    return f.split('#')[4]
+
+def get_seq_len(f):
+    return f.split('#')[5]
 
 def is_float(s):
     try:
@@ -92,9 +97,8 @@ def extract_nvprof_df_from_csv(files):
         df = df.drop_duplicates()
         df['result'] = total_time
 
-        # TODO
-        df['model'] = 'bert-based-cased'
-        df['sequence_length'] = 576
+        df['model'] = get_model_name(f)
+        df['sequence_length'] = get_seq_len(f)
 
         return df
 
