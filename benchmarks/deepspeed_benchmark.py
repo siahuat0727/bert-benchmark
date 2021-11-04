@@ -34,6 +34,7 @@ class DeepSpeedBenchmark(BaseBenchmark):
             print(assert_equality(pytorch_output, ds_output, atol=atol))
 
         def encoder_forward():
-            return model(input_ids)
+            with torch.no_grad():
+                return model(input_ids)
 
         return encoder_forward
