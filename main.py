@@ -17,9 +17,10 @@ def get_benchmark(runtime_method):
 def bert_infer_speed(pt_benchmark_subargs, runtime_method, max_batch_size, n_layer, check_equal, dynamic_batch, do_constant_folding):
     pt_benchmark_subdict = dataclasses.asdict(pt_benchmark_subargs)
 
-    assert len(pt_benchmark_subargs.batch_sizes) == 1, (
-        pt_benchmark_subargs.batch_sizes
-    )
+    if len(pt_benchmark_subargs.batch_sizes) != 1:
+        raise AssertionError(
+            pt_benchmark_subargs.batch_sizes
+        )
     batch_size = pt_benchmark_subargs.batch_sizes[0]
 
     output_csv = f'speed#{runtime_method}#{batch_size}.csv'
@@ -90,10 +91,11 @@ def main():
             args.do_constant_folding = True
             args.dynamic_batch = True
 
-    assert all(
+    if not all(
         batch_size <= args.max_batch_size
         for batch_size in pt_benchmark_subargs.batch_sizes
-    ), "Batch sizes is too large (increase --max_batch_size)"
+    ):
+        raise AssertionError("Batch sizes is too large (increase --max_batch_size)")
 
     bert_infer_speed(pt_benchmark_subargs, args.runtime_method,
                      args.max_batch_size, args.n_layer, args.check_equal,

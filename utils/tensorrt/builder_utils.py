@@ -70,7 +70,8 @@ def load_tf_weights(inputbase, config):
         for pn in param_names:
             toks = pn.lower().split("/")
             if "encoder" in pn:
-                assert ("layer" in pn)
+                if ("layer" not in pn):
+                    raise AssertionError
                 l = (re.findall("\d+", pn))[0]
                 outname = "l{}_".format(l) + "_".join(toks[3:])
             else:

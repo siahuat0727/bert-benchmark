@@ -180,7 +180,8 @@ def main():
     parser.add_argument('--frmt', default='python',
                         choices=['python', 'nvprof'], help="")
     args = parser.parse_args()
-    assert args.files, 'Files are needed to be plotted'
+    if not args.files:
+        raise AssertionError('Files are needed to be plotted')
     infos = get_infos(args)
     if args.type == 'error':
         plot_error(args.files)
