@@ -151,10 +151,8 @@ def plot_error(files):
             'runtime': runtime,
             'max_abs_error': max_abs_err,
         }
-    data = list(
-        get_runtime_and_value(f)
-        for f in files
-    )
+    data = [get_runtime_and_value(f)
+        for f in files]
     df = pd.DataFrame.from_records(data)
     df = df.sort_values(by='runtime', kind='stable')
     df['max_abs_error'] = pd.to_numeric(df['max_abs_error'], errors='coerce')
