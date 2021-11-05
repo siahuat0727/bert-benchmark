@@ -53,7 +53,8 @@ class TensorRTBenchmark(BaseBenchmark):
 
             # success = context.execute(batch_size=batch_size, bindings=bindings)
             success = context.execute_v2(bindings=bindings)
-            assert success, "Not exec success"
+            if not success:
+                raise AssertionError("Not exec success")
 
             if self.check_equal:
                 [cuda.memcpy_dtoh(out.host, out.device) for out in outputs]
@@ -72,7 +73,8 @@ class TensorRTBenchmark(BaseBenchmark):
             return
 
         batch_size = input_ids.size(0)
-        assert self.sequence_length is not None
+        if self.sequence_length is None:
+            raise AssertionError
 
         if self.use_plugin:
             # TODO no magic number
@@ -84,7 +86,8 @@ class TensorRTBenchmark(BaseBenchmark):
             if self.fp16:
                 cmd += ' --fp16'
             err = os.system(cmd)
-            assert not err, f'{cmd} exit with errno {err}'
+            if err:
+                raise AssertionError(f'{cmd} exit with errno {err}')
         else:
             from utils.tensorrt.utils import build_engine, save_engine
             engine = build_engine(onnx_model_path,

@@ -31,7 +31,8 @@ def build_engine(onnx_file_path, input_shape, max_batch_size):
 
         with open(onnx_file_path, 'rb') as model:
             parsing_succeed = parser.parse(model.read())
-            assert parsing_succeed, 'Failed to parse the ONNX model'
+            if not parsing_succeed:
+                raise AssertionError('Failed to parse the ONNX model')
 
         profile = builder.create_optimization_profile()
         profile.set_shape('input', (1,) + input_shape, (max_batch_size,) +
@@ -39,7 +40,8 @@ def build_engine(onnx_file_path, input_shape, max_batch_size):
         config.add_optimization_profile(profile)
 
         engine = builder.build_engine(network, config=config)
-        assert engine, 'Failed to build the engine'
+        if not engine:
+            raise AssertionError('Failed to build the engine')
     return engine
 
 
@@ -144,7 +146,8 @@ def do_inference_sync(context, bindings, inputs, outputs, stream):
 
     # Run inference.
     success_flag = context.execute_v2(bindings=bindings)
-    assert success_flag, 'trt execute failed'
+    if not success_flag:
+        raise AssertionError('trt execute failed')
 
     [cuda.memcpy_dtoh(out.host, out.device) for out in outputs]
 

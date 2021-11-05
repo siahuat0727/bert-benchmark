@@ -30,7 +30,8 @@ class NNFusionBenchmark(BaseBenchmark):
 
         with open('nnfusion_result.txt') as f:
             nnfusion_result = f.readlines()[-1]
-        assert nnfusion_result.startswith('Summary'), nnfusion_result
+        if not nnfusion_result.startswith('Summary'):
+            raise AssertionError(nnfusion_result)
 
         nnfusion_mintime = float(nnfusion_result.split('[')[
                                  2].split(',')[0]) / 1000
@@ -41,7 +42,8 @@ class NNFusionBenchmark(BaseBenchmark):
         os.system(
             f'LD_LIBRARY_PATH=/usr/local/lib nnfusion {onnx_model_path} -f onnx')
         os.system(f'cd nnfusion_rt/cuda_codegen && cmake . && make -j')
-        assert os.path.exists(nnfusion_path)
+        if not os.path.exists(nnfusion_path):
+            raise AssertionError
 
     def _do_prepare_nnfusion_inference_func(self, model, input_ids, nnfusion_path):
 

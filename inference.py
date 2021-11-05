@@ -126,7 +126,8 @@ if __name__ == '__main__':
         for binding in range(3):
             context.set_binding_shape(
                 binding_idx_offset + binding, input_shape)
-        assert context.all_binding_shapes_specified
+        if not context.all_binding_shapes_specified:
+            raise AssertionError
 
         # Create a stream in which to copy inputs/outputs and run inference.
         stream = cuda.Stream()

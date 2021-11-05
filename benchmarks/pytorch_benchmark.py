@@ -10,7 +10,8 @@ class PyTorchBenchmark(BaseBenchmark):
         super().__init__(*args, **kwargs)
 
         if self.runtime_method == 'pytorch-jit':
-            assert hasattr(self.args, 'torchscript')
+            if not hasattr(self.args, 'torchscript'):
+                raise AssertionError
             self.args.torchscript = True
 
     def _prepare_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:

@@ -60,10 +60,11 @@ skln_plg_creator = plg_registry.get_plugin_creator(
 fc_plg_creator = plg_registry.get_plugin_creator(
     "CustomFCPluginDynamic", "1", "")
 
-assert not any(
+if any(
     plg is None
     for plg in [emln_plg_creator, qkv2_plg_creator, skln_plg_creator, fc_plg_creator]
-), ', '.join([emln_plg_creator, qkv2_plg_creator, skln_plg_creator, fc_plg_creator])
+):
+    raise AssertionError(', '.join([emln_plg_creator, qkv2_plg_creator, skln_plg_creator, fc_plg_creator]))
 
 
 class BertConfig:
@@ -114,7 +115,8 @@ def attention_layer_opt(prefix, config, init_dict, network, input_tensor, imask)
     """
     Add the attention layer
     """
-    assert(len(input_tensor.shape) == 5)
+    if (len(input_tensor.shape) != 5):
+        raise AssertionError
     B, S, hidden_size, _, _ = input_tensor.shape
     num_heads = config.num_attention_heads
     head_size = int(hidden_size / num_heads)
@@ -187,7 +189,8 @@ def skipln(prefix, config, init_dict, network, input_tensor, skip, bias=None):
     Add the skip layer
     """
     idims = input_tensor.shape
-    assert len(idims) == 5
+    if len(idims) != 5:
+        raise AssertionError
     hidden_size = idims[2]
 
     dtype = trt.float32
@@ -248,14 +251,17 @@ def transformer_layer_opt(prefix, config, init_dict, network, input_tensor, imas
     Add the transformer layer
     """
     idims = input_tensor.shape
-    assert len(idims) == 5
+    if len(idims) != 5:
+        raise AssertionError
     hidden_size = idims[2]
 
     if config.use_qat:
         dr_input = init_dict[prefix + 'attention_self_query_input_amax']
-        assert(dr_input == init_dict[prefix + 'attention_self_key_input_amax'])
-        assert(dr_input == init_dict[prefix +
-               'attention_self_value_input_amax'])
+        if (dr_input != init_dict[prefix + 'attention_self_key_input_amax']):
+            raise AssertionError
+        if (dr_input != init_dict[prefix +
+               'attention_self_value_input_amax']):
+            raise AssertionError
         input_tensor.set_dynamic_range(-dr_input, dr_input)
 
     context_transposed = attention_layer_opt(
@@ -406,7 +412,8 @@ def squad_output(prefix, config, init_dict, network, input_tensor):
     """
 
     idims = input_tensor.shape
-    assert len(idims) == 5
+    if len(idims) != 5:
+        raise AssertionError
     B, S, hidden_size, _, _ = idims
 
     W_out = init_dict[prefix + SQD_W]
