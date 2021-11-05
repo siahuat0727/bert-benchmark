@@ -54,7 +54,7 @@ def load_tf_weights(inputbase, config):
         sys.stderr.write(
             """Error: Failed to import tensorflow module ({})\n""".format(err))
         sys.exit()
-    weights_dict = dict()
+    weights_dict = {}
 
     try:
         reader = tf.train.NewCheckpointReader(inputbase)
@@ -99,7 +99,7 @@ def load_tf_weights(inputbase, config):
         N = config.num_attention_heads
         H = config.head_size
 
-        additional_dict = dict()
+        additional_dict = {}
         for key, value in weights_dict.items():
             pos = key.find(BQ)
             if pos != -1:
@@ -216,7 +216,7 @@ def get_onnx_weight_dict(tensor_dict, config):
     H = config.head_size
     hidden_size = config.hidden_size
 
-    weights_dict = dict()
+    weights_dict = {}
     for outname, tensor in tensor_dict.items():
         if outname.find("_amax") != -1:
             weights_dict[outname] = tensor
