@@ -41,6 +41,8 @@ class BaseBenchmark(PyTorchBenchmark):
         self.pytorch_output = None
 
     def do_measure_speed(self, func, repeat, number, is_warmup=True):
+        if self.check_equal:
+            self._assert_result_allclose(func)
 
         if is_warmup:
             timeit.repeat(
@@ -81,7 +83,7 @@ class BaseBenchmark(PyTorchBenchmark):
         output = self.extract_output(func())
         if output is None:
             print('No implementation to verify correctness')
-            write('N/A')
+            write('NaN')
             return
 
         atol = get_appropriate_atol()
@@ -92,8 +94,6 @@ class BaseBenchmark(PyTorchBenchmark):
 
     # TODO not start with _, since some runtime (nnfusion) may override it
     def _measure_speed(self, func) -> float:
-        if self.check_equal:
-            self._assert_result_allclose(func)
         return self.do_measure_speed(func, self.args.repeat, 10)
 
     # TODO not start with _

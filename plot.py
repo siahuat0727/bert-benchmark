@@ -146,7 +146,7 @@ def plot_error(files):
     def get_runtime_and_value(f):
         runtime = f.split('_')[-1].split('.')[0]
         with open(f) as f:
-            max_abs_err = float(f.readline().strip())
+            max_abs_err = f.readline().strip()
         return {
             'runtime': runtime,
             'max_abs_error': max_abs_err,
@@ -155,10 +155,9 @@ def plot_error(files):
         get_runtime_and_value(f)
         for f in files
     )
-    print(data)
     df = pd.DataFrame.from_records(data)
-    print(df)
     df = df.sort_values(by='runtime', kind='stable')
+    df['max_abs_error'] = pd.to_numeric(df['max_abs_error'], errors='coerce')
     df = df.dropna()
     print(df)
 
