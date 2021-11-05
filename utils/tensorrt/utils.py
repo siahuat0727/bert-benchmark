@@ -1,6 +1,7 @@
 # reference: https://developer.nvidia.com/blog/speeding-up-deep-learning-inference-using-tensorflow-onnx-and-tensorrt/, https://github.com/RizhaoCai/PyTorch_ONNX_TensorRT/blob/master/dynamic_shape_example.py
 
 import os
+import sys
 
 import tensorrt as trt
 import pycuda.driver as cuda
@@ -212,12 +213,12 @@ def get_engine_fix_batch(max_batch_size=2, onnx_file_path="", engine_file_path="
 
             if not os.path.exists(onnx_file_path):
                 print('ONNX file {} not found'.format(onnx_file_path))
-                exit(0)
+                sys.exit(0)
             with open(onnx_file_path, 'rb') as model:
                 parsing_succeed = parser.parse(model.read())
 
                 if not parsing_succeed:
-                    exit('Failed to parse the ONNX model')
+                    sys.exit('Failed to parse the ONNX model')
             print('Building an engine from file {}; this may take a while...'.format(
                 onnx_file_path))
 
@@ -225,7 +226,7 @@ def get_engine_fix_batch(max_batch_size=2, onnx_file_path="", engine_file_path="
             engine = builder.build_engine(network, config=config)
 
             if not engine:
-                exit('Failed to build the engine')
+                sys.exit('Failed to build the engine')
 
             if save_engine:
                 with open(engine_file_path, "wb") as f:
