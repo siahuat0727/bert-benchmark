@@ -181,10 +181,10 @@ class BaseBenchmark(PyTorchBenchmark):
             # FIXME del
             return [tensor.cpu().numpy()]
             # return tensor[0].numpy(), tensor[1].numpy()
-            return [
-                tensor.last_hidden_state.numpy(),
-                tensor.pooler_output.numpy(),
-            ]
+            # return [
+            #     tensor.last_hidden_state.numpy(),
+            #     tensor.pooler_output.numpy(),
+            # ]
 
         with torch.no_grad():
             pytorch_output = model(input_ids)
