@@ -19,7 +19,7 @@ class NNFusionBenchmark(BaseBenchmark):
         onnx_model_path = f'{model_name}.onnx'
         self._export_onnx_model(model, input_ids, onnx_model_path)
 
-        nnfusion_path = f'nnfusion_rt/cuda_codegen/main_test'
+        nnfusion_path = 'nnfusion_rt/cuda_codegen/main_test'
 
         self._export_nnfusion_engine(
             model, input_ids, onnx_model_path, nnfusion_path)
@@ -39,10 +39,10 @@ class NNFusionBenchmark(BaseBenchmark):
 
     @staticmethod
     def _export_nnfusion_engine(model, input_ids, onnx_model_path, nnfusion_path):
-        os.system(f'rm -rf nnfusion_rt')
+        os.system('rm -rf nnfusion_rt')
         os.system(
             f'LD_LIBRARY_PATH=/usr/local/lib nnfusion {onnx_model_path} -f onnx')
-        os.system(f'cd nnfusion_rt/cuda_codegen && cmake . && make -j')
+        os.system('cd nnfusion_rt/cuda_codegen && cmake . && make -j')
         if not os.path.exists(nnfusion_path):
             raise AssertionError
 
