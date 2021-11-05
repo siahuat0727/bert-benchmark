@@ -4,7 +4,6 @@ from typing import Callable
 import numpy as np
 
 from .base_benchmark import BaseBenchmark
-from utils import assert_equality
 
 
 class TensorRTBenchmark(BaseBenchmark):
@@ -28,7 +27,7 @@ class TensorRTBenchmark(BaseBenchmark):
         return self._do_prepare_trt_inference_func(trt_engine_path, input_ids)
 
     def _do_prepare_trt_inference_func(self, trt_engine_path, input_ids):
-        from trt_utils import load_engine, allocate_buffers
+        from utils.tensorrt.utils import load_engine, allocate_buffers
         import pycuda.driver as cuda
 
         batch_size = input_ids.size(0)
@@ -78,7 +77,7 @@ class TensorRTBenchmark(BaseBenchmark):
         if self.use_plugin:
             # TODO no magic number
             cmd = (
-                f'python builder.py -x {onnx_model_path}'
+                f'python utils/tensorrt/builder.py -x {onnx_model_path}'
                 f' -o {trt_engine_path}'
                 f' -b {batch_size} -s {self.sequence_length} -c config/'
             )
@@ -87,7 +86,7 @@ class TensorRTBenchmark(BaseBenchmark):
             err = os.system(cmd)
             assert not err, f'{cmd} exit with errno {err}'
         else:
-            from trt_utils import build_engine, save_engine
+            from utils.tensorrt.utils import build_engine, save_engine
             engine = build_engine(onnx_model_path,
                                   input_ids.size()[1:],
                                   self.max_batch_size)

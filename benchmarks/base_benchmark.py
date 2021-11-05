@@ -11,7 +11,7 @@ from transformers import PyTorchBenchmark
 from transformers.models.auto.modeling_auto import MODEL_MAPPING
 from transformers import BertConfig
 
-from utils import assert_equality
+from utils.utils import assert_equality
 from models import BertModel
 
 

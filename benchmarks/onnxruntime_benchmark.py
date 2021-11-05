@@ -2,7 +2,6 @@ from typing import Callable
 
 
 from .base_benchmark import BaseBenchmark
-from utils import assert_equality
 
 
 class ONNXRuntimeBenchmark(BaseBenchmark):
