@@ -167,7 +167,7 @@ def plot_error(files):
     # ax.set_ylabel(infos['ylabel'])
     ax.set_xlabel('runtimes')
 
-    img_path = f"inference-max-abs-error.png"
+    img_path = "inference-max-abs-error.png"
     print(f'Save {img_path}')
     plt.savefig(img_path)
 
