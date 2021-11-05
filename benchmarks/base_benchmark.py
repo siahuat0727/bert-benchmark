@@ -161,7 +161,8 @@ class BaseBenchmark(PyTorchBenchmark):
         ok = onnx.checker.check_model(onnx_model)  # TODO What happend if fail?
         print(f'onnx {ok=}')
 
-    def _do_prepare_onnx_inference_func(self, onnx_model_path, input_ids):
+    @staticmethod
+    def _do_prepare_onnx_inference_func(onnx_model_path, input_ids):
 
         import onnxruntime
         ort_session = onnxruntime.InferenceSession(onnx_model_path)
@@ -176,7 +177,8 @@ class BaseBenchmark(PyTorchBenchmark):
 
         return encoder_forward
 
-    def _get_pytorch_output(self, model, input_ids):
+    @staticmethod
+    def _get_pytorch_output(model, input_ids):
         def extract_pytorch_output(tensor):
             # FIXME del
             return [tensor.cpu().numpy()]

@@ -37,7 +37,8 @@ class NNFusionBenchmark(BaseBenchmark):
                                  2].split(',')[0]) / 1000
         return nnfusion_mintime
 
-    def _export_nnfusion_engine(self, model, input_ids, onnx_model_path, nnfusion_path):
+    @staticmethod
+    def _export_nnfusion_engine(model, input_ids, onnx_model_path, nnfusion_path):
         os.system(f'rm -rf nnfusion_rt')
         os.system(
             f'LD_LIBRARY_PATH=/usr/local/lib nnfusion {onnx_model_path} -f onnx')

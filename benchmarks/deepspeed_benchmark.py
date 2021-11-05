@@ -20,7 +20,8 @@ class DeepSpeedBenchmark(BaseBenchmark):
 
         return self._do_prepare_deepspeed_inference_func(ds_model, input_ids)
 
-    def _do_prepare_deepspeed_inference_func(self, model, input_ids):
+    @staticmethod
+    def _do_prepare_deepspeed_inference_func(model, input_ids):
 
         def encoder_forward():
             with torch.no_grad():
