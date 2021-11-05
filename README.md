@@ -28,21 +28,23 @@ $ python3 -m venv env --without-pip && . env/bin/activate && \
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 python get-pip.py && rm get-pip.py
 ```
+## Verify correctness
+
+```bash
+$ bash test.sh && python3 plot.py --files max_abs_error_*.txt --type error
+...
+Save inference-max-abs-error.png
+```
 
 ## Run benchmark
 
 Including PyTorch, PyTorch-JIT, ONNXRuntime, TensorRT, DeepSpeed, NNFusion
 
 ```bash
-$ bash run.sh
-```
-
-## Plot results
-
-```bash
-$ python3 plot.py  --files speed*.csv
+$ bash run.sh && python3 plot.py --files speed*.csv && python3 plot.py --files nvprof*.csv  --frmt nvprof
+...
 Save inference-speed-python.png
-
-$ python3 plot.py  --files nvprof*.csv  --frmt nvprof
+...
 Save inference-speed-nvprof.png
 ```
+
