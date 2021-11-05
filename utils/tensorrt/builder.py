@@ -534,7 +534,7 @@ def build_engine(batch_sizes, workspace_size, sequence_lengths, config, weights_
             tactic_source = 1 << int(trt.TacticSource.CUBLAS) | 1 << int(
                 trt.TacticSource.CUBLAS_LT)
             builder_config.set_tactic_sources(tactic_source)
-            if config.timing_cache != None:
+            if config.timing_cache is not None:
                 if os.path.exists(config.timing_cache):
                     with open(config.timing_cache, "rb") as f:
                         cache = builder_config.create_timing_cache(f.read())
@@ -576,7 +576,7 @@ def build_engine(batch_sizes, workspace_size, sequence_lengths, config, weights_
                        "build engine in {:.3f} Sec".format(build_time_elapsed))
 
         # save global timing cache
-        if trt_version[0] >= 8 and config.timing_cache != None:
+        if trt_version[0] >= 8 and config.timing_cache is not None:
             cache = builder_config.get_timing_cache()
             with cache.serialize() as buffer:
                 with open(config.timing_cache, "wb") as f:
@@ -675,19 +675,19 @@ def main():
                    "Using configuration file: {:}".format(bert_config_path))
 
     config = BertConfig(bert_config_path, args.fp16, args.int8, args.strict, args.force_fc2_gemm, args.force_int8_skipln,
-                        args.force_int8_multihead, args.int8 and args.onnx != None, args.sparse, args.timing_cache_file)
+                        args.force_int8_multihead, args.int8 and args.onnx is not None, args.sparse, args.timing_cache_file)
 
-    if args.calib_path != None:
+    if args.calib_path is not None:
         calib_cache = args.calib_path
     else:
         calib_cache = "BertSquadL{}H{}A{}S{}CalibCache".format(
             config.num_hidden_layers, config.head_size, config.num_attention_heads, "-".join(str(len) for len in args.sequence_length))
 
-    if args.onnx != None:
+    if args.onnx is not None:
         weights_dict = load_onnx_weights_and_quant(args.onnx, config)
-    elif args.pytorch != None:
+    elif args.pytorch is not None:
         weights_dict = load_pytorch_weights_and_quant(args.pytorch, config)
-    elif args.ckpt != None:
+    elif args.ckpt is not None:
         weights_dict = load_tf_weights(args.ckpt, config)
         generate_calibration_cache(args.sequence_length, args.workspace_size, config,
                                    weights_dict, args.squad_json, args.vocab_file, calib_cache, args.calib_num)
