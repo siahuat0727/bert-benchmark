@@ -36,7 +36,7 @@ from builder_utils import SQD_W, SQD_B  # SQuAD Output Keys
 
 # TODO
 sys.path.append('/workspace/TensorRT/demo/BERT')
-from helpers.calibrator import BertCalibrator as BertCalibrator
+from helpers.calibrator import BertCalibrator
 
 """
 TensorRT Initialization
