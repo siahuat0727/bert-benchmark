@@ -63,7 +63,7 @@ class BaseBenchmark(PyTorchBenchmark):
 
     def extract_output(self, output):
         """Override this function to extract output of each runtime"""
-        pass
+        return
 
     def _assert_result_allclose(self, func):
         def write(txt):
