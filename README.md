@@ -6,7 +6,7 @@ Work in progress
 
 ```bash
 # 1. Run TensorRT Release docker
-$ docker run -v $HOME:/mnt --gpus all --rm -ti nvcr.io/nvidia/tensorrt:21.09-py3
+$ docker run -v $HOME:/mnt --gpus all --rm -ti nvcr.io/nvidia/tensorrt:21.10-py3
 
 # 2. Git clone
 $ git clone https://github.com/siahuat0727/bert-benchmark && \
