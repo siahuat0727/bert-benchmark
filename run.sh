@@ -14,7 +14,7 @@ mkdir $log_dir
 
 for batch in 1 2 4 8 16
 do
-	for runtime in deepspeed deepspeed-fp16 onnxruntime nnfusion pytorch pytorch-jit tensorrt tensorrt-plugin tensorrt-plugin-fp16
+	for runtime in deepspeed deepspeed-fp16 onnxruntime nnfusion pytorch pytorch-fp16 pytorch-jit tensorrt tensorrt-plugin tensorrt-plugin-fp16
 	do
 		benchmark_settings="--models ${model} --sequence_lengths ${seq_len} --batch_sizes $batch --repeat $repeat --save_to_csv"
 		log_file="${log_dir}/${runtime}_${batch}.log"

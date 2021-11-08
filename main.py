@@ -53,6 +53,7 @@ def main():
     parser.add_argument('--runtime-method',
                         default='pytorch',
                         choices=['pytorch',
+                                 'pytorch-fp16',
                                  'pytorch-jit',
                                  'onnxruntime',
                                  'tensorrt',

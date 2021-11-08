@@ -13,16 +13,17 @@ class PyTorchBenchmark(BaseBenchmark):
             if not hasattr(self.args, 'torchscript'):
                 raise AssertionError
             self.args.torchscript = True
+        if self.fp16:
+            if not hasattr(self.args, 'fp16'):
+                raise AssertionError
+            self.args.fp16 = True
 
     def _prepare_inference_func(self, model_name: str, batch_size: int, sequence_length: int) -> Callable[[], None]:
         model, input_ids = self._shared_prepare_inference_preprocessing(model_name, batch_size, sequence_length)
 
         if self.args.fp16:
-            logger.info("Running training in Mixed Precision...")
             if not self.args.is_gpu:
                 raise ValueError("Mixed precision is possible only for GPU.")
-            # amp seems to have memory leaks so that memory usage
-            # is measured using .half() for now https://github.com/NVIDIA/apex/issues/439
             model.half()
 
         if self.args.torchscript:
